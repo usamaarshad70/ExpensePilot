@@ -47,7 +47,7 @@ function Navbar({ setSidebarOpen }) {
       </div>
 
       <div className="flex items-center gap-3 md:gap-6">
-        <span className="hidden md:block text-slate-300">Welcome, Usama</span>
+        <span className="hidden md:block text-slate-300">Welcome</span>
 
         <button
           onClick={toggleTheme}
