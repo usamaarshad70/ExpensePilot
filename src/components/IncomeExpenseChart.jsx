@@ -7,17 +7,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { useExpense } from "../context/ExpenseContext";
-
-function IncomeExpenseChart() {
-  const { transactions } = useExpense();
-
+function IncomeExpenseChart({ transactions }) {
   const income = transactions
-    .filter((t) => t.type === "Income")
+    .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const expense = transactions
-    .filter((t) => t.type === "Expense")
+    .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const hasData = income > 0 || expense > 0;
@@ -36,7 +32,18 @@ function IncomeExpenseChart() {
   const COLORS = ["#22c55e", "#ef4444"];
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl shadow-lg">
+    <div
+      className="
+        bg-white
+        dark:bg-slate-800
+        border
+        border-slate-200
+        dark:border-slate-700
+        rounded-2xl
+        shadow-lg
+        p-6
+      "
+    >
       <h2 className="text-2xl font-bold mb-4">Income vs Expense</h2>
 
       {!hasData ? (
@@ -52,13 +59,20 @@ function IncomeExpenseChart() {
       ) : (
         <ResponsiveContainer width="100%" height={350}>
           <PieChart>
-            <Pie data={data} dataKey="value" outerRadius={120} label>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              outerRadius={120}
+              label
+            >
               {data.map((_, index) => (
                 <Cell key={index} fill={COLORS[index]} />
               ))}
             </Pie>
 
             <Tooltip />
+
             <Legend />
           </PieChart>
         </ResponsiveContainer>

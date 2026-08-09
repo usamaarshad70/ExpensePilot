@@ -7,13 +7,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import { useExpense } from "../context/ExpenseContext";
-
-function ExpenseChart() {
-  const { transactions } = useExpense();
-
+function ExpenseChart({ transactions }) {
   const expenseTransactions = transactions.filter(
-    (transaction) => transaction.type === "Expense",
+    (transaction) => transaction.type === "expense",
   );
 
   const chartData = Object.entries(
@@ -42,7 +38,18 @@ function ExpenseChart() {
   ];
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl shadow-lg">
+    <div
+      className="
+        bg-white
+        dark:bg-slate-800
+        border
+        border-slate-200
+        dark:border-slate-700
+        rounded-2xl
+        shadow-lg
+        p-6
+      "
+    >
       <h2 className="text-2xl font-bold mb-4">Category Breakdown</h2>
 
       {chartData.length === 0 ? (

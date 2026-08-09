@@ -2,9 +2,11 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
-const connectDB = require("./config/db");
-
 dotenv.config();
+
+const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
 
 const app = express();
 
@@ -12,16 +14,33 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 
-// Test route
+// ==============================
+// ROUTES
+// ==============================
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "ExpensePilot API is running",
   });
 });
+
+// Authentication routes
+app.use("/api/auth", authRoutes);
+app.use("/api/transactions", transactionRoutes);
+
+// ==============================
+// SERVER
+// ==============================
 
 const PORT = process.env.PORT || 5000;
 

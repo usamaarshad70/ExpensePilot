@@ -8,6 +8,7 @@ import "./index.css";
 
 import { ExpenseProvider } from "./context/ExpenseContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider } from "./context/AuthContext";
 
 import { Toaster } from "react-hot-toast";
 
@@ -15,39 +16,42 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider>
-        <ExpenseProvider>
-          <App />
+        <AuthProvider>
+          <ExpenseProvider>
+            <App />
 
-          <Toaster
-            position="top-right"
-            reverseOrder={false}
-            gutter={10}
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: "#1e293b",
-                color: "#ffffff",
-                borderRadius: "12px",
-                padding: "12px 16px",
-                fontSize: "14px",
-              },
+            <Toaster
+              position="top-right"
+              reverseOrder={false}
+              gutter={10}
+              toastOptions={{
+                duration: 3000,
 
-              success: {
-                iconTheme: {
-                  primary: "#22c55e",
-                  secondary: "#ffffff",
+                style: {
+                  background: "#1e293b",
+                  color: "#ffffff",
+                  borderRadius: "12px",
+                  padding: "12px 16px",
+                  fontSize: "14px",
                 },
-              },
 
-              error: {
-                iconTheme: {
-                  primary: "#ef4444",
-                  secondary: "#ffffff",
+                success: {
+                  iconTheme: {
+                    primary: "#22c55e",
+                    secondary: "#ffffff",
+                  },
                 },
-              },
-            }}
-          />
-        </ExpenseProvider>
+
+                error: {
+                  iconTheme: {
+                    primary: "#ef4444",
+                    secondary: "#ffffff",
+                  },
+                },
+              }}
+            />
+          </ExpenseProvider>
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>,

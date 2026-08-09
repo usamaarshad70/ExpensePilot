@@ -1,10 +1,31 @@
 import { saveAs } from "file-saver";
 import toast from "react-hot-toast";
-
 import { useExpense } from "../context/ExpenseContext";
 
 function ExportCSV() {
   const { transactions } = useExpense();
+
+  // Convert date to: 08 Aug 2026
+  const formatDate = (date) => {
+    if (!date) return "";
+
+    const d = new Date(date);
+
+    if (Number.isNaN(d.getTime())) {
+      return "";
+    }
+
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Properly escape CSV values
+  const escapeCSV = (value) => {
+    return `"${String(value ?? "").replace(/"/g, '""')}"`;
+  };
 
   const exportToCSV = () => {
     if (transactions.length === 0) {
@@ -14,24 +35,28 @@ function ExportCSV() {
 
     const headers = ["Title", "Amount", "Type", "Category", "Date"];
 
-    const rows = transactions.map((item) => [
-      item.title,
-      item.amount,
-      item.type,
-      item.category,
-      item.date,
+    const rows = transactions.map((transaction) => [
+      escapeCSV(transaction.title),
+      escapeCSV(transaction.amount),
+      escapeCSV(transaction.type),
+      escapeCSV(transaction.category),
+      escapeCSV(formatDate(transaction.date)),
     ]);
 
     const csvContent = [
-      headers.join(","),
+      headers.map(escapeCSV).join(","),
       ...rows.map((row) => row.join(",")),
-    ].join("\n");
+    ].join("\r\n");
 
-    const blob = new Blob([csvContent], {
+    const blob = new Blob(["\uFEFF" + csvContent], {
       type: "text/csv;charset=utf-8;",
     });
 
-    saveAs(blob, `ExpensePilot-${new Date().toISOString().slice(0, 10)}.csv`);
+    const fileName = `ExpensePilot-${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    saveAs(blob, fileName);
 
     toast.success("CSV Exported Successfully");
   };
@@ -40,13 +65,13 @@ function ExportCSV() {
     <button
       onClick={exportToCSV}
       className="
-      bg-emerald-600
-      hover:bg-emerald-700
-      text-white
-      px-4
-      py-2
-      rounded-lg
-      transition
+        bg-green-600
+        hover:bg-green-700
+        text-white
+        px-5
+        py-3
+        rounded-lg
+        font-semibold
       "
     >
       Export CSV

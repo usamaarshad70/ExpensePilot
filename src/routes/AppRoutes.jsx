@@ -4,17 +4,54 @@ import Dashboard from "../pages/Dashboard";
 import Expenses from "../pages/Expenses";
 import Reports from "../pages/Reports";
 import Settings from "../pages/Settings";
+import Auth from "../pages/Auth";
+
+import ProtectedRoute from "./ProtectedRoute";
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
+      {/* Authentication */}
 
-      <Route path="/expenses" element={<Expenses />} />
+      <Route path="/auth" element={<Auth />} />
 
-      <Route path="/reports" element={<Reports />} />
+      {/* Protected Application */}
 
-      <Route path="/settings" element={<Settings />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/expenses"
+        element={
+          <ProtectedRoute>
+            <Expenses />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

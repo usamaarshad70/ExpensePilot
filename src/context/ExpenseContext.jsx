@@ -4,88 +4,272 @@ import toast from "react-hot-toast";
 
 const ExpenseContext = createContext();
 
+const API_URL = "http://localhost:5000/api";
+
+const DEFAULT_CATEGORIES = [
+  "Food",
+  "Transport",
+  "Bills",
+  "Shopping",
+  "Salary",
+  "Health",
+  "Education",
+  "Entertainment",
+  "Investment",
+  "Gift",
+  "Siblings",
+];
+
+// Convert MongoDB transaction into the format
+// your existing React components expect.
+const normalizeTransaction = (transaction) => ({
+  id: transaction._id,
+  title: transaction.title,
+  amount: transaction.amount,
+  type: transaction.type,
+  category: transaction.category,
+  date: transaction.date,
+});
+
 export const ExpenseProvider = ({ children }) => {
-  // Transactions
+  // ==========================================
+  // STATE
+  // ==========================================
 
-  const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem("transactions");
-
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Categories
+  const [transactions, setTransactions] = useState([]);
 
   const [categories, setCategories] = useState(() => {
     const saved = localStorage.getItem("categories");
 
-    return saved
-      ? JSON.parse(saved)
-      : [
-          "Food",
-          "Transport",
-          "Bills",
-          "Shopping",
-          "Salary",
-          "Health",
-          "Education",
-          "Entertainment",
-          "Investment",
-          "Gift",
-          "Siblings",
-        ];
+    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
   });
 
-  // Save Transactions
+  const [loading, setLoading] = useState(true);
+
+  // ==========================================
+  // GET JWT TOKEN
+  // ==========================================
+
+  const getToken = () => {
+    return localStorage.getItem("expensepilot_token");
+  };
+
+  // ==========================================
+  // FETCH TRANSACTIONS
+  // ==========================================
+
+  const fetchTransactions = async () => {
+    try {
+      const token = getToken();
+
+      if (!token) {
+        setTransactions([]);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/transactions`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch transactions");
+      }
+
+      setTransactions(data.transactions.map(normalizeTransaction));
+    } catch (error) {
+      console.error("Fetch transactions error:", error);
+
+      toast.error(error.message || "Failed to load transactions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================
+  // LOAD TRANSACTIONS ON LOGIN
+  // ==========================================
 
   useEffect(() => {
-    localStorage.setItem("transactions", JSON.stringify(transactions));
-  }, [transactions]);
+    fetchTransactions();
+  }, []);
 
-  // Save Categories
+  // ==========================================
+  // SAVE CATEGORIES
+  // ==========================================
 
   useEffect(() => {
     localStorage.setItem("categories", JSON.stringify(categories));
   }, [categories]);
 
-  // Add Transaction
+  // ==========================================
+  // ADD TRANSACTION
+  // ==========================================
 
-  const addTransaction = (transaction) => {
-    setTransactions((prev) => [...prev, transaction]);
+  const addTransaction = async (transaction) => {
+    try {
+      const token = getToken();
 
-    toast.success("Transaction Added");
+      if (!token) {
+        toast.error("Please login first");
+        return false;
+      }
+
+      const response = await fetch(`${API_URL}/transactions`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          title: transaction.title,
+          amount: Number(transaction.amount),
+          type: transaction.type,
+          category: transaction.category,
+          date: transaction.date,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to add transaction");
+      }
+
+      const newTransaction = normalizeTransaction(data.transaction);
+
+      setTransactions((prev) => [newTransaction, ...prev]);
+
+      toast.success("Transaction Added");
+
+      return true;
+    } catch (error) {
+      console.error("Add transaction error:", error);
+
+      toast.error(error.message || "Failed to add transaction");
+
+      return false;
+    }
   };
 
-  // Update Transaction
+  // ==========================================
+  // UPDATE TRANSACTION
+  // ==========================================
 
-  const updateTransaction = (updatedTransaction) => {
-    setTransactions((prev) =>
-      prev.map((transaction) =>
-        transaction.id === updatedTransaction.id
-          ? updatedTransaction
-          : transaction,
-      ),
-    );
+  const updateTransaction = async (updatedTransaction) => {
+    try {
+      const token = getToken();
 
-    toast.success("Transaction Updated");
+      if (!token) {
+        toast.error("Please login first");
+        return false;
+      }
+
+      const response = await fetch(
+        `${API_URL}/transactions/${updatedTransaction.id}`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+
+          body: JSON.stringify({
+            title: updatedTransaction.title,
+            amount: Number(updatedTransaction.amount),
+            type: updatedTransaction.type,
+            category: updatedTransaction.category,
+            date: updatedTransaction.date,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update transaction");
+      }
+
+      const updated = normalizeTransaction(data.transaction);
+
+      setTransactions((prev) =>
+        prev.map((transaction) =>
+          transaction.id === updated.id ? updated : transaction,
+        ),
+      );
+
+      toast.success("Transaction Updated");
+
+      return true;
+    } catch (error) {
+      console.error("Update transaction error:", error);
+
+      toast.error(error.message || "Failed to update transaction");
+
+      return false;
+    }
   };
 
-  // Delete Transaction
+  // ==========================================
+  // DELETE TRANSACTION
+  // ==========================================
 
-  const deleteTransaction = (id) => {
+  const deleteTransaction = async (id) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this transaction?",
     );
 
-    if (!confirmed) return;
+    if (!confirmed) return false;
 
-    setTransactions((prev) =>
-      prev.filter((transaction) => transaction.id !== id),
-    );
+    try {
+      const token = getToken();
 
-    toast.success("Transaction Deleted");
+      if (!token) {
+        toast.error("Please login first");
+        return false;
+      }
+
+      const response = await fetch(`${API_URL}/transactions/${id}`, {
+        method: "DELETE",
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to delete transaction");
+      }
+
+      setTransactions((prev) =>
+        prev.filter((transaction) => transaction.id !== id),
+      );
+
+      toast.success("Transaction Deleted");
+
+      return true;
+    } catch (error) {
+      console.error("Delete transaction error:", error);
+
+      toast.error(error.message || "Failed to delete transaction");
+
+      return false;
+    }
   };
 
-  // Add Category
+  // ==========================================
+  // ADD CATEGORY
+  // ==========================================
 
   const addCategory = (category) => {
     const trimmed = category.trim();
@@ -109,7 +293,9 @@ export const ExpenseProvider = ({ children }) => {
     toast.success("Category Added");
   };
 
-  // Delete Category
+  // ==========================================
+  // DELETE CATEGORY
+  // ==========================================
 
   const deleteCategory = (category) => {
     const confirmed = window.confirm(`Delete "${category}" category?`);
@@ -121,43 +307,62 @@ export const ExpenseProvider = ({ children }) => {
     toast.success("Category Deleted");
   };
 
-  // Reset All Data
+  // ==========================================
+  // RESET ALL DATA
+  // ==========================================
 
-  const resetAllData = () => {
+  const resetAllData = async () => {
     const confirmed = window.confirm(
-      "This will delete ALL transactions and categories. Continue?",
+      "This will delete ALL transactions and reset categories. Continue?",
     );
 
     if (!confirmed) return;
 
-    localStorage.removeItem("transactions");
+    try {
+      const token = getToken();
 
-    localStorage.removeItem("categories");
+      if (!token) {
+        toast.error("Please login first");
+        return;
+      }
 
-    setTransactions([]);
+      // Delete all transactions belonging
+      // to the logged-in user.
+      const currentTransactions = [...transactions];
 
-    setCategories([
-      "Food",
-      "Transport",
-      "Bills",
-      "Shopping",
-      "Salary",
-      "Health",
-      "Education",
-      "Entertainment",
-      "Investment",
-      "Gift",
-      "Siblings",
-    ]);
+      for (const transaction of currentTransactions) {
+        await fetch(`${API_URL}/transactions/${transaction.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
 
-    toast.success("All data has been reset");
+      setTransactions([]);
+
+      setCategories(DEFAULT_CATEGORIES);
+
+      localStorage.removeItem("categories");
+
+      toast.success("All data has been reset");
+    } catch (error) {
+      console.error("Reset data error:", error);
+
+      toast.error("Failed to reset all data");
+    }
   };
+
+  // ==========================================
+  // CONTEXT VALUE
+  // ==========================================
 
   return (
     <ExpenseContext.Provider
       value={{
         transactions,
         categories,
+        loading,
 
         addTransaction,
         updateTransaction,
@@ -167,6 +372,8 @@ export const ExpenseProvider = ({ children }) => {
         deleteCategory,
 
         resetAllData,
+
+        fetchTransactions,
       }}
     >
       {children}
