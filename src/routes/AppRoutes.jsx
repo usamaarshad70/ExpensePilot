@@ -6,17 +6,36 @@ import Reports from "../pages/Reports";
 import Settings from "../pages/Settings";
 import Auth from "../pages/Auth";
 
+import VerifyEmail from "../pages/VerifyEmail";
+import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
+
 import ProtectedRoute from "./ProtectedRoute";
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Authentication */}
+      {/* ==========================================
+          AUTHENTICATION
+      ========================================== */}
 
+      {/* Login / Register */}
       <Route path="/auth" element={<Auth />} />
 
-      {/* Protected Application */}
+      {/* Email verification */}
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
+      {/* Forgot password */}
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* Reset password */}
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* ==========================================
+          PROTECTED APPLICATION
+      ========================================== */}
+
+      {/* Dashboard */}
       <Route
         path="/"
         element={
@@ -26,6 +45,7 @@ function AppRoutes() {
         }
       />
 
+      {/* Expenses */}
       <Route
         path="/expenses"
         element={
@@ -35,6 +55,7 @@ function AppRoutes() {
         }
       />
 
+      {/* Reports */}
       <Route
         path="/reports"
         element={
@@ -44,6 +65,7 @@ function AppRoutes() {
         }
       />
 
+      {/* Settings */}
       <Route
         path="/settings"
         element={
@@ -52,6 +74,12 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      {/* ==========================================
+          FALLBACK
+      ========================================== */}
+
+      <Route path="*" element={<Auth />} />
     </Routes>
   );
 }

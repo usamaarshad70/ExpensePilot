@@ -1,15 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
-
 import axios from "axios";
 import toast from "react-hot-toast";
 
 const AuthContext = createContext();
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-// ==========================================
-// AUTH PROVIDER
-// ==========================================
 
 export const AuthProvider = ({ children }) => {
   // ==========================================
@@ -68,12 +63,42 @@ export const AuthProvider = ({ children }) => {
         password,
       });
 
+      return {
+        success: true,
+        requiresVerification: response.data.requiresVerification,
+        email: response.data.email || email,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Unable to create account";
+
+      toast.error(message);
+
+      return {
+        success: false,
+        message,
+      };
+    }
+  };
+
+  // ==========================================
+  // VERIFY EMAIL
+  // ==========================================
+
+  const verifyEmail = async (email, code) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/verify-email`, {
+        email,
+        code,
+      });
+
       const data = response.data;
 
       setToken(data.token);
       setUser(data.user);
 
-      toast.success("Account created successfully");
+      toast.success("Email verified successfully");
 
       return {
         success: true,
@@ -81,7 +106,35 @@ export const AuthProvider = ({ children }) => {
       };
     } catch (error) {
       const message =
-        error.response?.data?.message || "Unable to create account";
+        error.response?.data?.message || "Invalid verification code";
+
+      toast.error(message);
+
+      return {
+        success: false,
+        message,
+      };
+    }
+  };
+
+  // ==========================================
+  // RESEND VERIFICATION
+  // ==========================================
+
+  const resendVerificationCode = async (email) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/resend-verification`, {
+        email,
+      });
+
+      toast.success(response.data.message);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Failed to send verification code";
 
       toast.error(message);
 
@@ -117,6 +170,68 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const message =
         error.response?.data?.message || "Invalid email or password";
+
+      toast.error(message);
+
+      return {
+        success: false,
+        message,
+        requiresVerification:
+          error.response?.data?.requiresVerification || false,
+        email: error.response?.data?.email || email,
+      };
+    }
+  };
+
+  // ==========================================
+  // FORGOT PASSWORD
+  // ==========================================
+
+  const forgotPassword = async (email) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+        email,
+      });
+
+      toast.success(response.data.message);
+
+      return {
+        success: true,
+        email,
+      };
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Failed to send reset code";
+
+      toast.error(message);
+
+      return {
+        success: false,
+        message,
+      };
+    }
+  };
+
+  // ==========================================
+  // RESET PASSWORD
+  // ==========================================
+
+  const resetPassword = async (email, code, newPassword) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/reset-password`, {
+        email,
+        code,
+        newPassword,
+      });
+
+      toast.success(response.data.message);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Failed to reset password";
 
       toast.error(message);
 
@@ -208,10 +323,6 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // ==========================================
-      // IMAGE TYPE
-      // ==========================================
-
       if (!file.type.startsWith("image/")) {
         toast.error("Please select a valid image file");
 
@@ -219,10 +330,6 @@ export const AuthProvider = ({ children }) => {
           success: false,
         };
       }
-
-      // ==========================================
-      // IMAGE SIZE
-      // ==========================================
 
       if (file.size > 5 * 1024 * 1024) {
         toast.error("Image size must be less than 5MB");
@@ -232,17 +339,9 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // ==========================================
-      // FORM DATA
-      // ==========================================
-
       const formData = new FormData();
 
       formData.append("profilePicture", file);
-
-      // ==========================================
-      // UPLOAD
-      // ==========================================
 
       const response = await axios.post(
         `${API_URL}/auth/profile-picture`,
@@ -253,10 +352,6 @@ export const AuthProvider = ({ children }) => {
           },
         },
       );
-
-      // ==========================================
-      // UPDATE USER
-      // ==========================================
 
       setUser(response.data.user);
 
@@ -359,6 +454,12 @@ export const AuthProvider = ({ children }) => {
         register,
         login,
         logout,
+
+        verifyEmail,
+        resendVerificationCode,
+
+        forgotPassword,
+        resetPassword,
 
         getCurrentUser,
 

@@ -2,7 +2,11 @@ const express = require("express");
 
 const {
   registerUser,
+  verifyEmail,
+  resendVerificationCode,
   loginUser,
+  forgotPassword,
+  resetPassword,
   getMe,
   updateProfile,
   uploadProfilePicture,
@@ -21,17 +25,29 @@ const router = express.Router();
 // Register
 router.post("/register", registerUser);
 
+// Verify email
+router.post("/verify-email", verifyEmail);
+
+// Resend verification code
+router.post("/resend-verification", resendVerificationCode);
+
 // Login
 router.post("/login", loginUser);
+
+// Forgot password
+router.post("/forgot-password", forgotPassword);
+
+// Reset password
+router.post("/reset-password", resetPassword);
 
 // ==========================================
 // PROTECTED ROUTES
 // ==========================================
 
-// Get current logged-in user
+// Current user
 router.get("/me", authMiddleware, getMe);
 
-// Update name/email
+// Update profile
 router.put("/profile", authMiddleware, updateProfile);
 
 // Upload profile picture
