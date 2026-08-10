@@ -1,3 +1,8 @@
+const dns = require("dns");
+
+// Prefer IPv4 connections
+dns.setDefaultResultOrder("ipv4first");
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -10,10 +15,16 @@ const transactionRoutes = require("./routes/transactionRoutes");
 
 const app = express();
 
-// Connect MongoDB
+// ==========================================
+// CONNECT MONGODB
+// ==========================================
+
 connectDB();
 
-// Middleware
+// ==========================================
+// MIDDLEWARE
+// ==========================================
+
 app.use(
   cors({
     origin: true,
@@ -23,9 +34,9 @@ app.use(
 
 app.use(express.json());
 
-// ==============================
-// ROUTES
-// ==============================
+// ==========================================
+// ROOT ROUTE
+// ==========================================
 
 app.get("/", (req, res) => {
   res.json({
@@ -34,13 +45,19 @@ app.get("/", (req, res) => {
   });
 });
 
-// Authentication routes
+// ==========================================
+// API ROUTES
+// ==========================================
+
+// Authentication
 app.use("/api/auth", authRoutes);
+
+// Transactions
 app.use("/api/transactions", transactionRoutes);
 
-// ==============================
+// ==========================================
 // SERVER
-// ==============================
+// ==========================================
 
 const PORT = process.env.PORT || 5000;
 
