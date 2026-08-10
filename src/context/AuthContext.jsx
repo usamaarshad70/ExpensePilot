@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -14,7 +15,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem("expensepilot_user");
 
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
   });
 
   // ==========================================
@@ -47,8 +52,6 @@ export const AuthProvider = ({ children }) => {
     } else {
       localStorage.removeItem("expensepilot_user");
     }
-
-    setLoading(false);
   }, [token, user]);
 
   // ==========================================
@@ -63,78 +66,22 @@ export const AuthProvider = ({ children }) => {
         password,
       });
 
-      return {
-        success: true,
-        requiresVerification: response.data.requiresVerification,
-        email: response.data.email || email,
-        message: response.data.message,
-      };
-    } catch (error) {
-      const message =
-        error.response?.data?.message || "Unable to create account";
-
-      toast.error(message);
-
-      return {
-        success: false,
-        message,
-      };
-    }
-  };
-
-  // ==========================================
-  // VERIFY EMAIL
-  // ==========================================
-
-  const verifyEmail = async (email, code) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/verify-email`, {
-        email,
-        code,
-      });
-
       const data = response.data;
 
       setToken(data.token);
       setUser(data.user);
 
-      toast.success("Email verified successfully");
+      toast.success(data.message || "Account created successfully");
 
       return {
         success: true,
         user: data.user,
+        token: data.token,
+        message: data.message,
       };
     } catch (error) {
       const message =
-        error.response?.data?.message || "Invalid verification code";
-
-      toast.error(message);
-
-      return {
-        success: false,
-        message,
-      };
-    }
-  };
-
-  // ==========================================
-  // RESEND VERIFICATION
-  // ==========================================
-
-  const resendVerificationCode = async (email) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/resend-verification`, {
-        email,
-      });
-
-      toast.success(response.data.message);
-
-      return {
-        success: true,
-      };
-    } catch (error) {
-      const message =
-        error.response?.data?.message || "Failed to send verification code";
+        error.response?.data?.message || "Unable to create account";
 
       toast.error(message);
 
@@ -161,11 +108,12 @@ export const AuthProvider = ({ children }) => {
       setToken(data.token);
       setUser(data.user);
 
-      toast.success("Login successful");
+      toast.success(data.message || "Login successful");
 
       return {
         success: true,
         user: data.user,
+        token: data.token,
       };
     } catch (error) {
       const message =
@@ -176,15 +124,13 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         message,
-        requiresVerification:
-          error.response?.data?.requiresVerification || false,
-        email: error.response?.data?.email || email,
       };
     }
   };
 
   // ==========================================
   // FORGOT PASSWORD
+  // NO EMAIL
   // ==========================================
 
   const forgotPassword = async (email) => {
@@ -193,15 +139,18 @@ export const AuthProvider = ({ children }) => {
         email,
       });
 
-      toast.success(response.data.message);
+      const data = response.data;
 
       return {
         success: true,
         email,
+        resetCode: data.resetCode,
+        expiresIn: data.expiresIn,
+        message: data.message,
       };
     } catch (error) {
       const message =
-        error.response?.data?.message || "Failed to send reset code";
+        error.response?.data?.message || "Failed to generate reset code";
 
       toast.error(message);
 
@@ -224,10 +173,13 @@ export const AuthProvider = ({ children }) => {
         newPassword,
       });
 
-      toast.success(response.data.message);
+      const data = response.data;
+
+      toast.success(data.message || "Password reset successfully");
 
       return {
         success: true,
+        message: data.message,
       };
     } catch (error) {
       const message =
@@ -268,7 +220,6 @@ export const AuthProvider = ({ children }) => {
         setToken(null);
 
         localStorage.removeItem("expensepilot_user");
-
         localStorage.removeItem("expensepilot_token");
       }
     } finally {
@@ -377,6 +328,42 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ==========================================
+  // REMOVE PROFILE PICTURE
+  // ==========================================
+
+  const removeProfilePicture = async () => {
+    try {
+      const response = await axios.delete(`${API_URL}/auth/profile-picture`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // Update user immediately
+      setUser(response.data.user);
+
+      toast.success("Profile picture removed successfully");
+
+      return {
+        success: true,
+        user: response.data.user,
+      };
+    } catch (error) {
+      console.error("Remove profile picture error:", error);
+
+      const message =
+        error.response?.data?.message || "Failed to remove profile picture";
+
+      toast.error(message);
+
+      return {
+        success: false,
+        message,
+      };
+    }
+  };
+
+  // ==========================================
   // CHANGE PASSWORD
   // ==========================================
 
@@ -422,7 +409,6 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
 
     localStorage.removeItem("expensepilot_user");
-
     localStorage.removeItem("expensepilot_token");
 
     toast.success("Logged out successfully");
@@ -455,9 +441,6 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
 
-        verifyEmail,
-        resendVerificationCode,
-
         forgotPassword,
         resetPassword,
 
@@ -465,6 +448,7 @@ export const AuthProvider = ({ children }) => {
 
         updateProfile,
         uploadProfilePicture,
+        removeProfilePicture,
 
         changePassword,
 

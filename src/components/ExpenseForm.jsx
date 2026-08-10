@@ -1,40 +1,49 @@
-import { useState, useEffect } from "react";
-import { useExpense } from "../context/ExpenseContext";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+
+import { useExpense } from "../context/ExpenseContext";
 
 function ExpenseForm({ editingTransaction, setEditingTransaction }) {
   const { addTransaction, updateTransaction, categories } = useExpense();
 
   const [title, setTitle] = useState("");
+
   const [amount, setAmount] = useState("");
+
   const [type, setType] = useState("expense");
+
   const [category, setCategory] = useState("");
+
   const [date, setDate] = useState("");
 
   // ==========================================
-  // LOAD TRANSACTION FOR EDITING
+  // LOAD EDIT DATA
   // ==========================================
 
   useEffect(() => {
-    if (editingTransaction) {
-      setTitle(editingTransaction.title);
-      setAmount(editingTransaction.amount);
+    if (!editingTransaction) {
+      return;
+    }
 
-      // Make sure type is lowercase for backend
-      setType(editingTransaction.type?.toLowerCase() || "expense");
+    setTitle(editingTransaction.title || "");
 
-      setCategory(editingTransaction.category);
+    setAmount(editingTransaction.amount ?? "");
 
-      // MongoDB returns an ISO date.
-      // Convert it to YYYY-MM-DD for date input.
-      setDate(
-        editingTransaction.date ? editingTransaction.date.substring(0, 10) : "",
-      );
+    setType(editingTransaction.type?.toLowerCase() || "expense");
+
+    setCategory(editingTransaction.category || "");
+
+    if (editingTransaction.date) {
+      const transactionDate = new Date(editingTransaction.date);
+
+      if (!Number.isNaN(transactionDate.getTime())) {
+        setDate(transactionDate.toISOString().slice(0, 10));
+      }
     }
   }, [editingTransaction]);
 
   // ==========================================
-  // RESET FORM
+  // RESET
   // ==========================================
 
   const resetForm = () => {
@@ -57,12 +66,12 @@ function ExpenseForm({ editingTransaction, setEditingTransaction }) {
     e.preventDefault();
 
     if (!title.trim()) {
-      toast.error("Please enter title");
+      toast.error("Please enter transaction title");
       return;
     }
 
     if (!amount || Number(amount) <= 0) {
-      toast.error("Please enter valid amount");
+      toast.error("Please enter a valid amount");
       return;
     }
 
@@ -76,8 +85,6 @@ function ExpenseForm({ editingTransaction, setEditingTransaction }) {
       return;
     }
 
-    // Backend expects lowercase:
-    // "expense" or "income"
     const transactionData = {
       title: title.trim(),
       amount: Number(amount),
@@ -97,104 +104,187 @@ function ExpenseForm({ editingTransaction, setEditingTransaction }) {
       success = await addTransaction(transactionData);
     }
 
-    // Only reset if API operation succeeded
     if (success) {
       resetForm();
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* TITLE */}
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* ======================================
+          TITLE
+      ====================================== */}
 
-      <input
-        type="text"
-        placeholder="Transaction Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-          dark:bg-slate-700
-        "
-      />
+      <div>
+        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+          Transaction Title
+        </label>
 
-      {/* AMOUNT */}
+        <input
+          type="text"
+          placeholder="e.g. Salary, Electricity Bill"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="
+            w-full
+            border
+            border-slate-300
+            dark:border-slate-600
+            bg-white
+            dark:bg-slate-700
+            text-slate-900
+            dark:text-white
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+          "
+        />
+      </div>
 
-      <input
-        type="number"
-        placeholder="Amount"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-          dark:bg-slate-700
-        "
-      />
+      {/* ======================================
+          AMOUNT
+      ====================================== */}
 
-      {/* DATE */}
+      <div>
+        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+          Amount
+        </label>
 
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-          dark:bg-slate-700
-        "
-      />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Enter amount"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="
+            w-full
+            border
+            border-slate-300
+            dark:border-slate-600
+            bg-white
+            dark:bg-slate-700
+            text-slate-900
+            dark:text-white
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+          "
+        />
+      </div>
 
-      {/* TYPE */}
+      {/* ======================================
+          DATE
+      ====================================== */}
 
-      <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-          dark:bg-slate-700
-        "
-      >
-        <option value="expense">Expense</option>
+      <div>
+        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+          Date
+        </label>
 
-        <option value="income">Income</option>
-      </select>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="
+            w-full
+            border
+            border-slate-300
+            dark:border-slate-600
+            bg-white
+            dark:bg-slate-700
+            text-slate-900
+            dark:text-white
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+          "
+        />
+      </div>
 
-      {/* CATEGORY */}
+      {/* ======================================
+          TYPE
+      ====================================== */}
 
-      <select
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-          dark:bg-slate-700
-        "
-      >
-        <option value="">Select Category</option>
+      <div>
+        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+          Transaction Type
+        </label>
 
-        {categories.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
-      </select>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="
+            w-full
+            border
+            border-slate-300
+            dark:border-slate-600
+            bg-white
+            dark:bg-slate-700
+            text-slate-900
+            dark:text-white
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+          "
+        >
+          <option value="expense">Expense</option>
 
-      {/* BUTTONS */}
+          <option value="income">Income</option>
+        </select>
+      </div>
 
-      <div className="flex gap-3">
+      {/* ======================================
+          CATEGORY
+      ====================================== */}
+
+      <div>
+        <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
+          Category
+        </label>
+
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="
+            w-full
+            border
+            border-slate-300
+            dark:border-slate-600
+            bg-white
+            dark:bg-slate-700
+            text-slate-900
+            dark:text-white
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+          "
+        >
+          <option value="">Select Category</option>
+
+          {categories.map((categoryItem) => (
+            <option key={categoryItem} value={categoryItem}>
+              {categoryItem}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* ======================================
+          BUTTONS
+      ====================================== */}
+
+      <div className="flex flex-wrap gap-3 pt-2">
         <button
           type="submit"
           className="
@@ -204,6 +294,8 @@ function ExpenseForm({ editingTransaction, setEditingTransaction }) {
             px-6
             py-3
             rounded-lg
+            font-medium
+            transition
           "
         >
           {editingTransaction ? "Update Transaction" : "Add Transaction"}
@@ -220,6 +312,8 @@ function ExpenseForm({ editingTransaction, setEditingTransaction }) {
               px-6
               py-3
               rounded-lg
+              font-medium
+              transition
             "
           >
             Cancel

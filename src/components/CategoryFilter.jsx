@@ -10,15 +10,25 @@ function CategoryFilter({ filterCategory, setFilterCategory }) {
       className="
         w-full
         border
+        border-slate-300
+        dark:border-slate-600
+        bg-white
+        dark:bg-slate-700
+        text-slate-900
+        dark:text-white
         p-3
         rounded-lg
-        dark:bg-slate-700
-        "
+        outline-none
+        focus:ring-2
+        focus:ring-blue-500
+      "
     >
       <option value="">All Categories</option>
 
       {categories.map((category) => (
-        <option key={category}>{category}</option>
+        <option key={category} value={category}>
+          {category}
+        </option>
       ))}
     </select>
   );

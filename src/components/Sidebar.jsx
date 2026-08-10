@@ -17,7 +17,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
     },
     {
       path: "/expenses",
-      label: "💰 Expenses",
+      label: "➕ Add Transaction",
     },
     {
       path: "/reports",

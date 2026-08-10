@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 
 function Navbar({ setSidebarOpen }) {
   const { darkMode, toggleTheme } = useTheme();
+
   const { user, logout } = useAuth();
 
   return (
@@ -12,12 +13,12 @@ function Navbar({ setSidebarOpen }) {
       className="
         fixed
         top-0
-        left-0
         right-0
+        left-0
+        lg:left-72
+        h-20
         z-50
-        h-16
         bg-slate-900
-        dark:bg-slate-950
         border-b
         border-slate-700
         shadow-lg
@@ -26,21 +27,20 @@ function Navbar({ setSidebarOpen }) {
       <div
         className="
           h-full
-          w-full
           px-3
           sm:px-5
           lg:px-6
           flex
           items-center
           justify-between
-          gap-2
+          gap-3
         "
       >
         {/* ======================================
-            LEFT SIDE
+            LEFT
         ====================================== */}
 
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0">
           {/* MOBILE MENU */}
 
           <button
@@ -48,13 +48,10 @@ function Navbar({ setSidebarOpen }) {
             onClick={() => setSidebarOpen(true)}
             className="
               lg:hidden
-              flex-shrink-0
               p-2
               rounded-lg
               text-white
               hover:bg-slate-800
-              active:bg-slate-700
-              transition
             "
             aria-label="Open sidebar"
           >
@@ -70,9 +67,7 @@ function Navbar({ setSidebarOpen }) {
               lg:text-2xl
               font-bold
               text-white
-              tracking-tight
               whitespace-nowrap
-              truncate
             "
           >
             ExpensePilot
@@ -80,26 +75,20 @@ function Navbar({ setSidebarOpen }) {
         </div>
 
         {/* ======================================
-            RIGHT SIDE
+            RIGHT
         ====================================== */}
 
         <div
           className="
             flex
             items-center
-            gap-1.5
-            sm:gap-2
+            gap-2
             lg:gap-4
-            flex-shrink-0
           "
         >
-          {/* ======================================
-              PROFILE
-          ====================================== */}
+          {/* PROFILE */}
 
-          <div className="flex items-center min-w-0">
-            {/* PROFILE IMAGE */}
-
+          <div className="flex items-center">
             {user?.profilePicture ? (
               <img
                 src={user.profilePicture}
@@ -115,8 +104,6 @@ function Navbar({ setSidebarOpen }) {
                   object-cover
                   border-2
                   border-blue-500
-                  shadow-md
-                  flex-shrink-0
                 "
               />
             ) : (
@@ -135,18 +122,13 @@ function Navbar({ setSidebarOpen }) {
                   items-center
                   justify-center
                   font-bold
-                  text-base
-                  sm:text-lg
                   border-2
                   border-blue-400
-                  flex-shrink-0
                 "
               >
                 {user?.name?.charAt(0)?.toUpperCase() || "U"}
               </div>
             )}
-
-            {/* DESKTOP USER NAME ONLY */}
 
             <span
               className="
@@ -158,15 +140,12 @@ function Navbar({ setSidebarOpen }) {
                 max-w-[150px]
                 truncate
               "
-              title={user?.name || "User"}
             >
               Welcome, {user?.name || "User"}
             </span>
           </div>
 
-          {/* ======================================
-              LOGOUT
-          ====================================== */}
+          {/* LOGOUT */}
 
           <button
             type="button"
@@ -185,24 +164,17 @@ function Navbar({ setSidebarOpen }) {
               rounded-xl
               bg-red-600
               hover:bg-red-700
-              active:bg-red-800
               text-white
               font-medium
-              transition-all
-              duration-200
-              flex-shrink-0
             "
             title="Logout"
-            aria-label="Logout"
           >
             <LogOut size={18} />
 
             <span className="hidden sm:inline ml-2">Logout</span>
           </button>
 
-          {/* ======================================
-              THEME
-          ====================================== */}
+          {/* THEME */}
 
           <button
             type="button"
@@ -220,22 +192,15 @@ function Navbar({ setSidebarOpen }) {
               sm:py-2
               rounded-xl
               font-semibold
-              transition-all
-              duration-200
-              shadow-lg
               bg-white
               text-black
               dark:bg-slate-800
               dark:text-white
-              dark:border
+              border
+              border-transparent
               dark:border-slate-700
-              hover:scale-105
-              flex-shrink-0
             "
             title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            aria-label={
-              darkMode ? "Switch to light mode" : "Switch to dark mode"
-            }
           >
             <span className="text-lg">{darkMode ? "☀️" : "🌙"}</span>
 

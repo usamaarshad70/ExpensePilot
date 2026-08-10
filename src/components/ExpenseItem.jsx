@@ -1,7 +1,17 @@
 import { useExpense } from "../context/ExpenseContext";
 
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString("en-GB", {
+  if (!date) {
+    return "";
+  }
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return parsedDate.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -11,66 +21,99 @@ const formatDate = (date) => {
 function ExpenseItem({ transaction, onEdit }) {
   const { deleteTransaction } = useExpense();
 
+  const isIncome = transaction.type === "income";
+
   return (
     <div
       className="
         flex
-        justify-between
-        items-center
+        flex-col
+        lg:flex-row
+        lg:items-center
+        lg:justify-between
+        gap-4
         p-4
         rounded-xl
+        bg-slate-100
+        dark:bg-slate-700
         border
         border-slate-200
-        dark:border-slate-700
-        bg-white
-        dark:bg-slate-800
+        dark:border-slate-600
       "
     >
-      {/* LEFT */}
-      <div>
-        <h3 className="font-bold text-lg">{transaction.title}</h3>
+      {/* ======================================
+          LEFT
+      ====================================== */}
+
+      <div className="min-w-0">
+        <h3 className="font-semibold text-slate-900 dark:text-white truncate">
+          {transaction.title}
+        </h3>
 
         <p className="text-sm text-slate-600 dark:text-slate-300">
           {transaction.category}
         </p>
 
-        <p className="text-sm text-gray-500">{formatDate(transaction.date)}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          {formatDate(transaction.date)}
+        </p>
       </div>
 
-      {/* RIGHT */}
-      <div className="flex gap-2 items-center">
+      {/* ======================================
+          RIGHT
+      ====================================== */}
+
+      <div
+        className="
+          flex
+          flex-wrap
+          items-center
+          gap-2
+          lg:justify-end
+        "
+      >
         <span
-          className={`font-bold ${
-            transaction.type === "income" ? "text-green-500" : "text-red-500"
-          }`}
+          className={`
+            font-bold
+            mr-1
+            ${isIncome ? "text-green-500" : "text-red-500"}
+          `}
         >
-          {transaction.type === "income" ? "+" : "-"} PKR{" "}
+          {isIncome ? "+" : "-"} PKR{" "}
           {Number(transaction.amount).toLocaleString()}
         </span>
 
         <button
+          type="button"
           onClick={() => onEdit(transaction)}
           className="
             bg-yellow-500
             hover:bg-yellow-600
             text-white
             px-3
-            py-1
-            rounded
+            py-1.5
+            rounded-lg
+            text-sm
+            font-medium
+            transition
           "
         >
           Edit
         </button>
 
         <button
+          type="button"
           onClick={() => deleteTransaction(transaction.id)}
           className="
             bg-red-500
             hover:bg-red-600
             text-white
             px-3
-            py-1
-            rounded
+            py-1.5
+            rounded-lg
+            text-sm
+            font-medium
+            transition
           "
         >
           Delete

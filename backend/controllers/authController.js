@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 const cloudinary = require("../config/cloudinary");
-const sendEmail = require("../config/email");
 
 // ==========================================
 // GENERATE JWT
@@ -22,83 +21,11 @@ const generateToken = (userId) => {
 };
 
 // ==========================================
-// GENERATE 6 DIGIT CODE
+// GENERATE 6 DIGIT RESET CODE
 // ==========================================
 
 const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// ==========================================
-// SEND VERIFICATION EMAIL
-// ==========================================
-
-const sendVerificationEmail = async (user) => {
-  const code = generateCode();
-
-  user.emailVerificationCode = code;
-
-  // Code valid for 10 minutes
-  user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000);
-
-  await user.save();
-
-  await sendEmail({
-    to: user.email,
-    subject: "Verify your ExpensePilot account",
-    html: `
-      <div style="
-        font-family: Arial, sans-serif;
-        max-width: 600px;
-        margin: auto;
-        padding: 30px;
-        background: #f8fafc;
-        border-radius: 12px;
-      ">
-        <h1 style="color:#2563eb;">
-          ExpensePilot
-        </h1>
-
-        <h2>Verify your email</h2>
-
-        <p>
-          Hello ${user.name},
-        </p>
-
-        <p>
-          Thank you for creating your ExpensePilot account.
-          Please use the verification code below:
-        </p>
-
-        <div style="
-          font-size: 36px;
-          font-weight: bold;
-          letter-spacing: 8px;
-          background: white;
-          padding: 20px;
-          text-align: center;
-          border-radius: 10px;
-          color: #2563eb;
-        ">
-          ${code}
-        </div>
-
-        <p>
-          This code will expire in <strong>10 minutes</strong>.
-        </p>
-
-        <p>
-          If you did not create this account, you can safely ignore this email.
-        </p>
-
-        <hr />
-
-        <p style="color:#64748b;">
-          ExpensePilot
-        </p>
-      </div>
-    `,
-  });
 };
 
 // ==========================================
@@ -109,10 +36,18 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Name, email and password are required",
+      });
+    }
+
+    if (name.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be at least 2 characters",
       });
     }
 
@@ -123,147 +58,38 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
+    // Check existing user
     const existingUser = await User.findOne({
       email: normalizedEmail,
     });
 
     if (existingUser) {
-      if (!existingUser.isEmailVerified) {
-        try {
-          await sendVerificationEmail(existingUser);
-
-          return res.status(200).json({
-            success: true,
-            requiresVerification: true,
-            message:
-              "Account already exists but email is not verified. A new verification code has been sent.",
-            email: existingUser.email,
-          });
-        } catch (emailError) {
-          console.error("Verification email error:", emailError);
-
-          return res.status(500).json({
-            success: false,
-            message: "Account exists but verification email could not be sent",
-          });
-        }
-      }
-
       return res.status(409).json({
         success: false,
         message: "An account with this email already exists",
       });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Create user
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
-
-      // New users must verify email
-      isEmailVerified: false,
     });
 
-    try {
-      await sendVerificationEmail(user);
-    } catch (emailError) {
-      console.error("Verification email error:", emailError);
-
-      // Remove account if email cannot be sent
-      await User.findByIdAndDelete(user._id);
-
-      return res.status(500).json({
-        success: false,
-        message:
-          "Account could not be created because verification email could not be sent",
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      requiresVerification: true,
-      message: "Account created successfully. Please verify your email.",
-      email: user.email,
-    });
-  } catch (error) {
-    console.error("Register error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server error while creating account",
-    });
-  }
-};
-
-// ==========================================
-// VERIFY EMAIL
-// ==========================================
-
-const verifyEmail = async (req, res) => {
-  try {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and verification code are required",
-      });
-    }
-
-    const user = await User.findOne({
-      email: email.toLowerCase().trim(),
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Account not found",
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is already verified",
-      });
-    }
-
-    if (!user.emailVerificationCode || !user.emailVerificationExpires) {
-      return res.status(400).json({
-        success: false,
-        message: "Verification code is invalid. Please request a new code.",
-      });
-    }
-
-    if (new Date() > user.emailVerificationExpires) {
-      return res.status(400).json({
-        success: false,
-        message: "Verification code has expired",
-      });
-    }
-
-    if (user.emailVerificationCode !== code.toString().trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid verification code",
-      });
-    }
-
-    user.isEmailVerified = true;
-    user.emailVerificationCode = null;
-    user.emailVerificationExpires = null;
-
-    await user.save();
-
+    // Generate token
     const token = generateToken(user._id);
 
-    res.status(200).json({
+    // Response
+    return res.status(201).json({
       success: true,
-      message: "Email verified successfully",
+      message: "Account created successfully",
       token,
       user: {
         id: user._id,
@@ -273,60 +99,11 @@ const verifyEmail = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Verify email error:", error);
+    console.error("Register error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Server error while verifying email",
-    });
-  }
-};
-
-// ==========================================
-// RESEND VERIFICATION CODE
-// ==========================================
-
-const resendVerificationCode = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required",
-      });
-    }
-
-    const user = await User.findOne({
-      email: email.toLowerCase().trim(),
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Account not found",
-      });
-    }
-
-    if (user.isEmailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is already verified",
-      });
-    }
-
-    await sendVerificationEmail(user);
-
-    res.status(200).json({
-      success: true,
-      message: "A new verification code has been sent",
-    });
-  } catch (error) {
-    console.error("Resend verification error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to send verification code",
+      message: "Server error while creating account",
     });
   }
 };
@@ -339,6 +116,7 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -346,8 +124,12 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find user
     const user = await User.findOne({
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
     });
 
     if (!user) {
@@ -357,6 +139,7 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Compare password
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
@@ -366,27 +149,13 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // EMAIL VERIFICATION CHECK
-    // ==========================================
-
-    if (!user.isEmailVerified) {
-      return res.status(403).json({
-        success: false,
-        requiresVerification: true,
-        message: "Please verify your email before logging in",
-        email: user.email,
-      });
-    }
-
+    // Generate token
     const token = generateToken(user._id);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
-
       token,
-
       user: {
         id: user._id,
         name: user.name,
@@ -397,7 +166,7 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Server error while logging in",
     });
@@ -406,12 +175,14 @@ const loginUser = async (req, res) => {
 
 // ==========================================
 // FORGOT PASSWORD
+// NO EMAIL
 // ==========================================
 
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
+    // Validation
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -419,93 +190,45 @@ const forgotPassword = async (req, res) => {
       });
     }
 
+    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
+    // Find user
     const user = await User.findOne({
       email: normalizedEmail,
     });
 
-    // Don't reveal whether email exists
     if (!user) {
-      return res.status(200).json({
-        success: true,
-        message:
-          "If an account exists with this email, a reset code has been sent.",
+      return res.status(404).json({
+        success: false,
+        message: "No account found with this email",
       });
     }
 
+    // Generate 6 digit code
     const code = generateCode();
 
+    // Save reset code
     user.passwordResetCode = code;
+
+    // Code expires after 10 minutes
     user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
 
-    await sendEmail({
-      to: user.email,
-      subject: "ExpensePilot password reset code",
-      html: `
-        <div style="
-          font-family: Arial, sans-serif;
-          max-width: 600px;
-          margin: auto;
-          padding: 30px;
-          background: #f8fafc;
-          border-radius: 12px;
-        ">
-          <h1 style="color:#2563eb;">
-            ExpensePilot
-          </h1>
-
-          <h2>Password Reset</h2>
-
-          <p>
-            Hello ${user.name},
-          </p>
-
-          <p>
-            We received a request to reset your ExpensePilot password.
-          </p>
-
-          <p>
-            Your password reset code is:
-          </p>
-
-          <div style="
-            font-size: 36px;
-            font-weight: bold;
-            letter-spacing: 8px;
-            background: white;
-            padding: 20px;
-            text-align: center;
-            border-radius: 10px;
-            color: #2563eb;
-          ">
-            ${code}
-          </div>
-
-          <p>
-            This code will expire in <strong>10 minutes</strong>.
-          </p>
-
-          <p>
-            If you did not request a password reset, please ignore this email.
-          </p>
-        </div>
-      `,
-    });
-
-    res.status(200).json({
+    // DEVELOPMENT / NO EMAIL MODE
+    return res.status(200).json({
       success: true,
-      message:
-        "If an account exists with this email, a reset code has been sent.",
+      message: "Password reset code generated successfully",
+      resetCode: code,
+      expiresIn: 600,
     });
   } catch (error) {
     console.error("Forgot password error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Failed to process password reset request",
+      message: "Failed to generate password reset code",
     });
   }
 };
@@ -518,6 +241,7 @@ const resetPassword = async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
 
+    // Validation
     if (!email || !code || !newPassword) {
       return res.status(400).json({
         success: false,
@@ -532,8 +256,12 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find user
     const user = await User.findOne({
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
     });
 
     if (!user) {
@@ -543,6 +271,7 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    // Check reset code exists
     if (!user.passwordResetCode || !user.passwordResetExpires) {
       return res.status(400).json({
         success: false,
@@ -550,13 +279,20 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    // Check expiration
     if (new Date() > user.passwordResetExpires) {
+      user.passwordResetCode = null;
+      user.passwordResetExpires = null;
+
+      await user.save();
+
       return res.status(400).json({
         success: false,
         message: "Reset code has expired",
       });
     }
 
+    // Compare code
     if (user.passwordResetCode !== code.toString().trim()) {
       return res.status(400).json({
         success: false,
@@ -564,21 +300,23 @@ const resetPassword = async (req, res) => {
       });
     }
 
+    // Hash new password
     user.password = await bcrypt.hash(newPassword, 10);
 
+    // Clear reset code
     user.passwordResetCode = null;
     user.passwordResetExpires = null;
 
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Password reset successfully. You can now login.",
     });
   } catch (error) {
     console.error("Reset password error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to reset password",
     });
@@ -600,9 +338,8 @@ const getMe = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-
       user: {
         id: user._id,
         name: user.name,
@@ -613,7 +350,7 @@ const getMe = async (req, res) => {
   } catch (error) {
     console.error("Get user error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Server error",
     });
@@ -637,6 +374,7 @@ const updateProfile = async (req, res) => {
       });
     }
 
+    // Update name
     if (name !== undefined) {
       if (name.trim().length < 2) {
         return res.status(400).json({
@@ -648,6 +386,7 @@ const updateProfile = async (req, res) => {
       user.name = name.trim();
     }
 
+    // Update email
     if (email !== undefined) {
       const normalizedEmail = email.toLowerCase().trim();
 
@@ -670,10 +409,9 @@ const updateProfile = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-
       user: {
         id: user._id,
         name: user.name,
@@ -684,7 +422,7 @@ const updateProfile = async (req, res) => {
   } catch (error) {
     console.error("Update profile error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to update profile",
     });
@@ -697,6 +435,7 @@ const updateProfile = async (req, res) => {
 
 const uploadProfilePicture = async (req, res) => {
   try {
+    // Check file
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -704,6 +443,7 @@ const uploadProfilePicture = async (req, res) => {
       });
     }
 
+    // Find user
     const user = await User.findById(req.userId);
 
     if (!user) {
@@ -713,12 +453,15 @@ const uploadProfilePicture = async (req, res) => {
       });
     }
 
+    // ==========================================
+    // UPLOAD NEW IMAGE FIRST
+    // ==========================================
+
     const uploadResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: "expensepilot/profile-pictures",
           resource_type: "image",
-
           transformation: [
             {
               width: 300,
@@ -728,7 +471,6 @@ const uploadProfilePicture = async (req, res) => {
             },
           ],
         },
-
         (error, result) => {
           if (error) {
             reject(error);
@@ -741,14 +483,49 @@ const uploadProfilePicture = async (req, res) => {
       uploadStream.end(req.file.buffer);
     });
 
+    // ==========================================
+    // SAVE OLD PICTURE INFORMATION
+    // ==========================================
+
+    const oldPublicId = user.profilePicturePublicId;
+
+    // ==========================================
+    // SAVE NEW PICTURE
+    // ==========================================
+
     user.profilePicture = uploadResult.secure_url;
+
+    user.profilePicturePublicId = uploadResult.public_id;
 
     await user.save();
 
-    res.status(200).json({
+    // ==========================================
+    // DELETE OLD CLOUDINARY IMAGE
+    // AFTER NEW IMAGE IS SAVED
+    // ==========================================
+
+    if (oldPublicId && oldPublicId !== uploadResult.public_id) {
+      try {
+        await cloudinary.uploader.destroy(oldPublicId, {
+          resource_type: "image",
+        });
+
+        console.log("Old profile picture deleted:", oldPublicId);
+      } catch (deleteError) {
+        console.error(
+          "Old profile picture deletion error:",
+          deleteError.message,
+        );
+      }
+    }
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
+
+    return res.status(200).json({
       success: true,
       message: "Profile picture updated successfully",
-
       user: {
         id: user._id,
         name: user.name,
@@ -759,9 +536,76 @@ const uploadProfilePicture = async (req, res) => {
   } catch (error) {
     console.error("Profile picture upload error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to upload profile picture",
+    });
+  }
+};
+
+// ==========================================
+// REMOVE PROFILE PICTURE
+// ==========================================
+
+const removeProfilePicture = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // ==========================================
+    // DELETE IMAGE FROM CLOUDINARY
+    // ==========================================
+
+    if (user.profilePicturePublicId) {
+      try {
+        await cloudinary.uploader.destroy(user.profilePicturePublicId, {
+          resource_type: "image",
+        });
+
+        console.log(
+          "Profile picture deleted from Cloudinary:",
+          user.profilePicturePublicId,
+        );
+      } catch (cloudinaryError) {
+        console.error("Cloudinary deletion error:", cloudinaryError.message);
+      }
+    }
+
+    // ==========================================
+    // CLEAR PROFILE PICTURE
+    // ==========================================
+
+    user.profilePicture = "";
+    user.profilePicturePublicId = "";
+
+    await user.save();
+
+    // ==========================================
+    // RESPONSE
+    // ==========================================
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile picture removed successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        profilePicture: "",
+      },
+    });
+  } catch (error) {
+    console.error("Remove profile picture error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to remove profile picture",
     });
   }
 };
@@ -810,14 +654,14 @@ const changePassword = async (req, res) => {
 
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Password changed successfully",
     });
   } catch (error) {
     console.error("Change password error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to change password",
     });
@@ -830,13 +674,12 @@ const changePassword = async (req, res) => {
 
 module.exports = {
   registerUser,
-  verifyEmail,
-  resendVerificationCode,
   loginUser,
   forgotPassword,
   resetPassword,
   getMe,
   updateProfile,
   uploadProfilePicture,
+  removeProfilePicture,
   changePassword,
 };

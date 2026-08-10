@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
-
 import toast from "react-hot-toast";
+
+import { useAuth } from "./AuthContext";
 
 const ExpenseContext = createContext();
 
@@ -20,18 +21,26 @@ const DEFAULT_CATEGORIES = [
   "Siblings",
 ];
 
-// Convert MongoDB transaction into the format
-// your existing React components expect.
+// ==========================================
+// NORMALIZE TRANSACTION
+// ==========================================
+
 const normalizeTransaction = (transaction) => ({
   id: transaction._id,
   title: transaction.title,
-  amount: transaction.amount,
+  amount: Number(transaction.amount),
   type: transaction.type,
   category: transaction.category,
   date: transaction.date,
 });
 
+// ==========================================
+// PROVIDER
+// ==========================================
+
 export const ExpenseProvider = ({ children }) => {
+  const { user } = useAuth();
+
   // ==========================================
   // STATE
   // ==========================================
@@ -39,15 +48,20 @@ export const ExpenseProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
 
   const [categories, setCategories] = useState(() => {
-    const saved = localStorage.getItem("categories");
+    try {
+      const saved = localStorage.getItem("categories");
 
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+      return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    } catch (error) {
+      console.error("Categories load error:", error);
+      return DEFAULT_CATEGORIES;
+    }
   });
 
   const [loading, setLoading] = useState(true);
 
   // ==========================================
-  // GET JWT TOKEN
+  // GET TOKEN
   // ==========================================
 
   const getToken = () => {
@@ -59,14 +73,17 @@ export const ExpenseProvider = ({ children }) => {
   // ==========================================
 
   const fetchTransactions = async () => {
-    try {
-      const token = getToken();
+    const token = getToken();
 
-      if (!token) {
-        setTransactions([]);
-        setLoading(false);
-        return;
-      }
+    // No logged-in user/token
+    if (!user || !token) {
+      setTransactions([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
 
       const response = await fetch(`${API_URL}/transactions`, {
         method: "GET",
@@ -81,9 +98,15 @@ export const ExpenseProvider = ({ children }) => {
         throw new Error(data.message || "Failed to fetch transactions");
       }
 
-      setTransactions(data.transactions.map(normalizeTransaction));
+      const normalizedTransactions = Array.isArray(data.transactions)
+        ? data.transactions.map(normalizeTransaction)
+        : [];
+
+      setTransactions(normalizedTransactions);
     } catch (error) {
       console.error("Fetch transactions error:", error);
+
+      setTransactions([]);
 
       toast.error(error.message || "Failed to load transactions");
     } finally {
@@ -92,12 +115,18 @@ export const ExpenseProvider = ({ children }) => {
   };
 
   // ==========================================
-  // LOAD TRANSACTIONS ON LOGIN
+  // IMPORTANT:
+  // LOAD TRANSACTIONS WHEN USER CHANGES
   // ==========================================
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    if (user) {
+      fetchTransactions();
+    } else {
+      setTransactions([]);
+      setLoading(false);
+    }
+  }, [user]);
 
   // ==========================================
   // SAVE CATEGORIES
@@ -115,7 +144,7 @@ export const ExpenseProvider = ({ children }) => {
     try {
       const token = getToken();
 
-      if (!token) {
+      if (!user || !token) {
         toast.error("Please login first");
         return false;
       }
@@ -167,7 +196,7 @@ export const ExpenseProvider = ({ children }) => {
     try {
       const token = getToken();
 
-      if (!token) {
+      if (!user || !token) {
         toast.error("Please login first");
         return false;
       }
@@ -227,12 +256,14 @@ export const ExpenseProvider = ({ children }) => {
       "Are you sure you want to delete this transaction?",
     );
 
-    if (!confirmed) return false;
+    if (!confirmed) {
+      return false;
+    }
 
     try {
       const token = getToken();
 
-      if (!token) {
+      if (!user || !token) {
         toast.error("Please login first");
         return false;
       }
@@ -300,7 +331,9 @@ export const ExpenseProvider = ({ children }) => {
   const deleteCategory = (category) => {
     const confirmed = window.confirm(`Delete "${category}" category?`);
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     setCategories((prev) => prev.filter((item) => item !== category));
 
@@ -316,28 +349,30 @@ export const ExpenseProvider = ({ children }) => {
       "This will delete ALL transactions and reset categories. Continue?",
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     try {
       const token = getToken();
 
-      if (!token) {
+      if (!user || !token) {
         toast.error("Please login first");
         return;
       }
 
-      // Delete all transactions belonging
-      // to the logged-in user.
       const currentTransactions = [...transactions];
 
-      for (const transaction of currentTransactions) {
-        await fetch(`${API_URL}/transactions/${transaction.id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
+      await Promise.all(
+        currentTransactions.map((transaction) =>
+          fetch(`${API_URL}/transactions/${transaction.id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ),
+      );
 
       setTransactions([]);
 
@@ -381,4 +416,10 @@ export const ExpenseProvider = ({ children }) => {
   );
 };
 
-export const useExpense = () => useContext(ExpenseContext);
+// ==========================================
+// HOOK
+// ==========================================
+
+export const useExpense = () => {
+  return useContext(ExpenseContext);
+};

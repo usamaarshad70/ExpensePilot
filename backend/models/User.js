@@ -3,20 +3,14 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     // ==========================================
-    // NAME
+    // BASIC USER INFORMATION
     // ==========================================
 
     name: {
       type: String,
       required: true,
       trim: true,
-      minlength: 2,
-      maxlength: 50,
     },
-
-    // ==========================================
-    // EMAIL
-    // ==========================================
 
     email: {
       type: String,
@@ -26,14 +20,9 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ==========================================
-    // PASSWORD
-    // ==========================================
-
     password: {
       type: String,
       required: true,
-      minlength: 6,
     },
 
     // ==========================================
@@ -45,23 +34,11 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    // ==========================================
-    // EMAIL VERIFICATION
-    // ==========================================
-
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-
-    emailVerificationCode: {
+    // Cloudinary public ID
+    // Used to delete/replace the image properly
+    profilePicturePublicId: {
       type: String,
-      default: null,
-    },
-
-    emailVerificationExpires: {
-      type: Date,
-      default: null,
+      default: "",
     },
 
     // ==========================================

@@ -1,5 +1,7 @@
 import { useState } from "react";
+
 import { Eye, EyeOff } from "lucide-react";
+
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -12,7 +14,9 @@ function Auth() {
   const [isLogin, setIsLogin] = useState(true);
 
   const [name, setName] = useState("");
+
   const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
@@ -39,20 +43,7 @@ function Auth() {
     setLoading(false);
 
     if (result.success) {
-      if (!isLogin && result.requiresVerification) {
-        navigate(`/verify-email?email=${encodeURIComponent(result.email)}`);
-
-        return;
-      }
-
       navigate("/");
-    }
-
-    // Login with unverified email
-    if (isLogin && result.requiresVerification) {
-      navigate(
-        `/verify-email?email=${encodeURIComponent(result.email || email)}`,
-      );
     }
   };
 
@@ -71,11 +62,33 @@ function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 px-4 py-8">
-      <div className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 md:p-10">
-        {/* ======================================
-            LOGO
-        ====================================== */}
+    <div
+      className="
+        min-h-screen
+        flex
+        items-center
+        justify-center
+        bg-slate-100
+        dark:bg-slate-950
+        px-4
+        py-8
+      "
+    >
+      <div
+        className="
+          w-full
+          max-w-md
+          bg-white
+          dark:bg-slate-900
+          rounded-2xl
+          shadow-xl
+          p-8
+          border
+          border-slate-200
+          dark:border-slate-800
+        "
+      >
+        {/* LOGO */}
 
         <div className="text-center mb-8">
           <img
@@ -92,21 +105,21 @@ function Auth() {
 
           <h1
             className="
-            text-3xl
-            font-bold
-            text-slate-900
-            dark:text-white
-          "
+              text-3xl
+              font-bold
+              text-slate-900
+              dark:text-white
+            "
           >
             ExpensePilot
           </h1>
 
           <p
             className="
-            text-slate-500
-            dark:text-slate-400
-            mt-2
-          "
+              text-slate-500
+              dark:text-slate-400
+              mt-2
+            "
           >
             {isLogin
               ? "Welcome back! Sign in to continue."
@@ -114,9 +127,7 @@ function Auth() {
           </p>
         </div>
 
-        {/* ======================================
-            FORM
-        ====================================== */}
+        {/* FORM */}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* NAME */}
@@ -125,13 +136,13 @@ function Auth() {
             <div>
               <label
                 className="
-                block
-                text-sm
-                font-medium
-                mb-2
-                text-slate-700
-                dark:text-slate-300
-              "
+                  block
+                  text-sm
+                  font-medium
+                  mb-2
+                  text-slate-700
+                  dark:text-slate-300
+                "
               >
                 Full Name
               </label>
@@ -167,13 +178,13 @@ function Auth() {
           <div>
             <label
               className="
-              block
-              text-sm
-              font-medium
-              mb-2
-              text-slate-700
-              dark:text-slate-300
-            "
+                block
+                text-sm
+                font-medium
+                mb-2
+                text-slate-700
+                dark:text-slate-300
+              "
             >
               Email Address
             </label>
@@ -208,13 +219,13 @@ function Auth() {
           <div>
             <label
               className="
-              block
-              text-sm
-              font-medium
-              mb-2
-              text-slate-700
-              dark:text-slate-300
-            "
+                block
+                text-sm
+                font-medium
+                mb-2
+                text-slate-700
+                dark:text-slate-300
+              "
             >
               Password
             </label>
@@ -312,16 +323,14 @@ function Auth() {
           </button>
         </form>
 
-        {/* ======================================
-            SWITCH
-        ====================================== */}
+        {/* SWITCH */}
 
         <div className="text-center mt-6">
           <p
             className="
-            text-slate-500
-            dark:text-slate-400
-          "
+              text-slate-500
+              dark:text-slate-400
+            "
           >
             {isLogin ? "Don't have an account?" : "Already have an account?"}
           </p>

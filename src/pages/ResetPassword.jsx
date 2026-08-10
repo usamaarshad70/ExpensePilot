@@ -1,5 +1,7 @@
 import { useState } from "react";
+
 import { Eye, EyeOff } from "lucide-react";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -13,18 +15,34 @@ function ResetPassword() {
 
   const [email, setEmail] = useState(searchParams.get("email") || "");
 
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(searchParams.get("code") || "");
 
   const [newPassword, setNewPassword] = useState("");
 
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
 
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
+
+  // ==========================================
+  // SUBMIT
+  // ==========================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (code.length !== 6) {
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
       return;
     }
 
@@ -40,54 +58,54 @@ function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 px-4">
+    <div
+      className="
+        min-h-screen
+        flex
+        items-center
+        justify-center
+        bg-slate-100
+        dark:bg-slate-950
+        px-4
+        py-8
+      "
+    >
       <div
         className="
-        w-full
-        max-w-md
-        bg-white
-        dark:bg-slate-900
-        rounded-2xl
-        shadow-xl
-        p-6
-        sm:p-8
-        border
-        border-slate-200
-        dark:border-slate-800
-      "
+          w-full
+          max-w-md
+          bg-white
+          dark:bg-slate-900
+          rounded-2xl
+          shadow-xl
+          p-8
+          border
+          border-slate-200
+          dark:border-slate-800
+        "
       >
-        <div className="text-center mb-8">
-          <img
-            src="/Expense Pilot Logo.png"
-            alt="ExpensePilot"
-            className="
-              w-20
-              h-20
-              object-contain
-              mx-auto
-              mb-4
-            "
-          />
+        {/* HEADER */}
 
+        <div className="text-center mb-8">
           <h1
             className="
-            text-2xl
-            font-bold
-            text-slate-900
-            dark:text-white
-          "
+              text-2xl
+              font-bold
+              text-slate-900
+              dark:text-white
+            "
           >
             Reset Password
           </h1>
 
           <p
             className="
-            mt-2
-            text-slate-500
-            dark:text-slate-400
-          "
+              mt-2
+              text-slate-500
+              dark:text-slate-400
+            "
           >
-            Enter the code sent to your email and create a new password.
+            Enter your reset code and create a new password.
           </p>
         </div>
 
@@ -97,13 +115,13 @@ function ResetPassword() {
           <div>
             <label
               className="
-              block
-              text-sm
-              font-medium
-              mb-2
-              text-slate-700
-              dark:text-slate-300
-            "
+                block
+                text-sm
+                font-medium
+                mb-2
+                text-slate-700
+                dark:text-slate-300
+              "
             >
               Email
             </label>
@@ -132,18 +150,18 @@ function ResetPassword() {
             />
           </div>
 
-          {/* CODE */}
+          {/* RESET CODE */}
 
           <div>
             <label
               className="
-              block
-              text-sm
-              font-medium
-              mb-2
-              text-slate-700
-              dark:text-slate-300
-            "
+                block
+                text-sm
+                font-medium
+                mb-2
+                text-slate-700
+                dark:text-slate-300
+              "
             >
               Reset Code
             </label>
@@ -183,13 +201,13 @@ function ResetPassword() {
           <div>
             <label
               className="
-              block
-              text-sm
-              font-medium
-              mb-2
-              text-slate-700
-              dark:text-slate-300
-            "
+                block
+                text-sm
+                font-medium
+                mb-2
+                text-slate-700
+                dark:text-slate-300
+              "
             >
               New Password
             </label>
@@ -238,9 +256,82 @@ function ResetPassword() {
             </div>
           </div>
 
+          {/* CONFIRM PASSWORD */}
+
+          <div>
+            <label
+              className="
+                block
+                text-sm
+                font-medium
+                mb-2
+                text-slate-700
+                dark:text-slate-300
+              "
+            >
+              Confirm New Password
+            </label>
+
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                minLength={6}
+                required
+                className="
+                  w-full
+                  px-4
+                  py-3
+                  pr-12
+                  rounded-xl
+                  border
+                  border-slate-300
+                  dark:border-slate-700
+                  bg-white
+                  dark:bg-slate-800
+                  text-slate-900
+                  dark:text-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                "
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="
+                  absolute
+                  right-3
+                  top-1/2
+                  -translate-y-1/2
+                  text-slate-500
+                  hover:text-blue-600
+                "
+              >
+                {showConfirmPassword ? <EyeOff size={21} /> : <Eye size={21} />}
+              </button>
+            </div>
+          </div>
+
+          {/* PASSWORD MATCH */}
+
+          {confirmPassword && newPassword !== confirmPassword && (
+            <p className="text-sm text-red-500">Passwords do not match.</p>
+          )}
+
+          {/* SUBMIT */}
+
           <button
             type="submit"
-            disabled={loading || code.length !== 6}
+            disabled={
+              loading ||
+              code.length !== 6 ||
+              newPassword.length < 6 ||
+              newPassword !== confirmPassword
+            }
             className="
               w-full
               bg-blue-600
@@ -250,11 +341,14 @@ function ResetPassword() {
               font-semibold
               py-3
               rounded-xl
+              transition
             "
           >
             {loading ? "Resetting..." : "Reset Password"}
           </button>
         </form>
+
+        {/* BACK */}
 
         <button
           type="button"
@@ -266,6 +360,7 @@ function ResetPassword() {
             text-slate-500
             hover:text-blue-600
             dark:text-slate-400
+            dark:hover:text-blue-400
           "
         >
           Back to Login

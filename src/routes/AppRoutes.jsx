@@ -4,9 +4,8 @@ import Dashboard from "../pages/Dashboard";
 import Expenses from "../pages/Expenses";
 import Reports from "../pages/Reports";
 import Settings from "../pages/Settings";
-import Auth from "../pages/Auth";
 
-import VerifyEmail from "../pages/VerifyEmail";
+import Auth from "../pages/Auth";
 import ForgotPassword from "../pages/ForgotPassword";
 import ResetPassword from "../pages/ResetPassword";
 
@@ -19,23 +18,16 @@ function AppRoutes() {
           AUTHENTICATION
       ========================================== */}
 
-      {/* Login / Register */}
       <Route path="/auth" element={<Auth />} />
 
-      {/* Email verification */}
-      <Route path="/verify-email" element={<VerifyEmail />} />
-
-      {/* Forgot password */}
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      {/* Reset password */}
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ==========================================
           PROTECTED APPLICATION
       ========================================== */}
 
-      {/* Dashboard */}
       <Route
         path="/"
         element={
@@ -45,7 +37,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Expenses */}
       <Route
         path="/expenses"
         element={
@@ -55,7 +46,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Reports */}
       <Route
         path="/reports"
         element={
@@ -65,7 +55,6 @@ function AppRoutes() {
         }
       />
 
-      {/* Settings */}
       <Route
         path="/settings"
         element={

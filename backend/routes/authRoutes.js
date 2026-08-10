@@ -2,34 +2,27 @@ const express = require("express");
 
 const {
   registerUser,
-  verifyEmail,
-  resendVerificationCode,
   loginUser,
   forgotPassword,
   resetPassword,
   getMe,
   updateProfile,
   uploadProfilePicture,
+  removeProfilePicture,
   changePassword,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
-const upload = require("../middleware/uploadMiddleware");
+const upload = require("../middleware/upload");
 
 const router = express.Router();
 
 // ==========================================
-// PUBLIC ROUTES
+// PUBLIC AUTH ROUTES
 // ==========================================
 
 // Register
 router.post("/register", registerUser);
-
-// Verify email
-router.post("/verify-email", verifyEmail);
-
-// Resend verification code
-router.post("/resend-verification", resendVerificationCode);
 
 // Login
 router.post("/login", loginUser);
@@ -41,7 +34,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
 // ==========================================
-// PROTECTED ROUTES
+// PROTECTED AUTH ROUTES
 // ==========================================
 
 // Current user
@@ -50,6 +43,10 @@ router.get("/me", authMiddleware, getMe);
 // Update profile
 router.put("/profile", authMiddleware, updateProfile);
 
+// ==========================================
+// PROFILE PICTURE
+// ==========================================
+
 // Upload profile picture
 router.post(
   "/profile-picture",
@@ -57,6 +54,13 @@ router.post(
   upload.single("profilePicture"),
   uploadProfilePicture,
 );
+
+// Remove profile picture
+router.delete("/profile-picture", authMiddleware, removeProfilePicture);
+
+// ==========================================
+// PASSWORD
+// ==========================================
 
 // Change password
 router.put("/change-password", authMiddleware, changePassword);

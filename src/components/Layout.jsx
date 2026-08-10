@@ -31,10 +31,12 @@ function Layout({ children }) {
 
         <main
           className="
-            pt-16
-            p-4
-            md:p-6
-            lg:p-8
+            pt-24
+            px-4
+            pb-8
+            md:px-6
+            lg:px-8
+            min-h-screen
           "
         >
           {children}

@@ -23,8 +23,13 @@ function Settings() {
   // AUTH
   // ==========================================
 
-  const { user, updateProfile, uploadProfilePicture, changePassword } =
-    useAuth();
+  const {
+    user,
+    updateProfile,
+    uploadProfilePicture,
+    removeProfilePicture,
+    changePassword,
+  } = useAuth();
 
   // ==========================================
   // CATEGORY STATE
@@ -38,6 +43,7 @@ function Settings() {
 
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
+
   const [profilePicture, setProfilePicture] = useState(
     user?.profilePicture || "",
   );
@@ -56,7 +62,9 @@ function Settings() {
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+
   const [showNewPassword, setShowNewPassword] = useState(false);
+
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // ==========================================
@@ -88,7 +96,7 @@ function Settings() {
   };
 
   // ==========================================
-  // PROFILE PICTURE
+  // UPLOAD PROFILE PICTURE
   // ==========================================
 
   const handleProfilePicture = async (e) => {
@@ -114,8 +122,20 @@ function Settings() {
   // REMOVE PROFILE PICTURE
   // ==========================================
 
-  const removeProfilePicture = () => {
-    setProfilePicture("");
+  const handleRemoveProfilePicture = async () => {
+    if (!profilePicture) {
+      return;
+    }
+
+    setPictureLoading(true);
+
+    const result = await removeProfilePicture();
+
+    if (result.success) {
+      setProfilePicture("");
+    }
+
+    setPictureLoading(false);
   };
 
   // ==========================================
@@ -291,6 +311,8 @@ function Settings() {
               {/* IMAGE CONTROLS */}
 
               <div className="space-y-3">
+                {/* CHOOSE PICTURE */}
+
                 <label
                   className={`
                     inline-block
@@ -309,7 +331,7 @@ function Settings() {
                     }
                   `}
                 >
-                  {pictureLoading ? "Uploading..." : "📷 Choose Picture"}
+                  {pictureLoading ? "Processing..." : "📷 Choose Picture"}
 
                   <input
                     type="file"
@@ -320,10 +342,12 @@ function Settings() {
                   />
                 </label>
 
+                {/* REMOVE PICTURE */}
+
                 {profilePicture && !pictureLoading && (
                   <button
                     type="button"
-                    onClick={removeProfilePicture}
+                    onClick={handleRemoveProfilePicture}
                     className="
                       block
                       text-red-600
@@ -332,7 +356,7 @@ function Settings() {
                       font-medium
                     "
                   >
-                    Remove Picture
+                    🗑️ Remove Picture
                   </button>
                 )}
 
@@ -597,7 +621,7 @@ function Settings() {
             </div>
           </div>
 
-          {/* PASSWORD MATCH MESSAGE */}
+          {/* PASSWORD MATCH */}
 
           {confirmPassword && newPassword !== confirmPassword && (
             <p className="text-sm text-red-600">
