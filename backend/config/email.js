@@ -1,52 +1,29 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-// ==========================================
-// CREATE EMAIL TRANSPORTER
-// ==========================================
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-
-  // Port 587 = STARTTLS
-  secure: Number(process.env.SMTP_PORT) === 465,
-
-  // Force IPv4
-  family: 4,
-
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-
-  // Timeouts
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-});
-
-// ==========================================
-// SEND EMAIL
-// ==========================================
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    const info = await transporter.sendMail({
+    const { data, error } = await resend.emails.send({
       from: process.env.EMAIL_FROM,
-      to,
+      to: [to],
       subject,
       html,
     });
 
-    console.log("Email sent:", info.messageId);
+    if (error) {
+      console.error("Resend email error:", error);
+      throw new Error(error.message || "Failed to send email");
+    }
+
+    console.log("Email sent:", data?.id);
 
     return {
       success: true,
-      messageId: info.messageId,
+      messageId: data?.id,
     };
   } catch (error) {
     console.error("Email sending error:", error);
-
     throw error;
   }
 };
