@@ -7,17 +7,23 @@ const AuthContext = createContext();
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// ==========================================
+// AUTH PROVIDER
+// ==========================================
+
 export const AuthProvider = ({ children }) => {
   // ==========================================
   // USER
   // ==========================================
 
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("expensepilot_user");
-
     try {
+      const savedUser = localStorage.getItem("expensepilot_user");
+
       return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
+    } catch (error) {
+      console.error("User load error:", error);
+
       return null;
     }
   });
@@ -26,9 +32,9 @@ export const AuthProvider = ({ children }) => {
   // TOKEN
   // ==========================================
 
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem("expensepilot_token");
-  });
+  const [token, setToken] = useState(() =>
+    localStorage.getItem("expensepilot_token"),
+  );
 
   // ==========================================
   // LOADING
@@ -61,8 +67,8 @@ export const AuthProvider = ({ children }) => {
   const register = async (name, email, password) => {
     try {
       const response = await axios.post(`${API_URL}/auth/register`, {
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
         password,
       });
 
@@ -99,7 +105,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await axios.post(`${API_URL}/auth/login`, {
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -114,6 +120,7 @@ export const AuthProvider = ({ children }) => {
         success: true,
         user: data.user,
         token: data.token,
+        message: data.message,
       };
     } catch (error) {
       const message =
@@ -130,27 +137,26 @@ export const AuthProvider = ({ children }) => {
 
   // ==========================================
   // FORGOT PASSWORD
-  // NO EMAIL
   // ==========================================
 
   const forgotPassword = async (email) => {
     try {
       const response = await axios.post(`${API_URL}/auth/forgot-password`, {
-        email,
+        email: email.trim(),
       });
 
       const data = response.data;
 
       return {
         success: true,
-        email,
-        resetCode: data.resetCode,
-        expiresIn: data.expiresIn,
+        email: email.trim(),
+        resetCode: data.resetCode || null,
+        expiresIn: data.expiresIn || null,
         message: data.message,
       };
     } catch (error) {
       const message =
-        error.response?.data?.message || "Failed to generate reset code";
+        error.response?.data?.message || "Failed to process password reset";
 
       toast.error(message);
 
@@ -168,8 +174,8 @@ export const AuthProvider = ({ children }) => {
   const resetPassword = async (email, code, newPassword) => {
     try {
       const response = await axios.post(`${API_URL}/auth/reset-password`, {
-        email,
-        code,
+        email: email.trim(),
+        code: code.trim(),
         newPassword,
       });
 
@@ -215,11 +221,12 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Get current user error:", error);
 
-      if (error.response?.status === 401) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
         setUser(null);
         setToken(null);
 
         localStorage.removeItem("expensepilot_user");
+
         localStorage.removeItem("expensepilot_token");
       }
     } finally {
@@ -233,15 +240,22 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await axios.put(`${API_URL}/auth/profile`, profileData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const response = await axios.put(
+        `${API_URL}/auth/profile`,
+        {
+          name: profileData.name.trim(),
+          email: profileData.email.trim(),
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
       setUser(response.data.user);
 
-      toast.success("Profile updated successfully");
+      toast.success(response.data.message || "Profile updated successfully");
 
       return {
         success: true,
@@ -290,6 +304,21 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Only JPG, PNG, WEBP or GIF images are allowed");
+
+        return {
+          success: false,
+        };
+      }
+
       const formData = new FormData();
 
       formData.append("profilePicture", file);
@@ -306,7 +335,9 @@ export const AuthProvider = ({ children }) => {
 
       setUser(response.data.user);
 
-      toast.success("Profile picture updated successfully");
+      toast.success(
+        response.data.message || "Profile picture updated successfully",
+      );
 
       return {
         success: true,
@@ -339,10 +370,11 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      // Update user immediately
       setUser(response.data.user);
 
-      toast.success("Profile picture removed successfully");
+      toast.success(
+        response.data.message || "Profile picture removed successfully",
+      );
 
       return {
         success: true,
@@ -382,7 +414,7 @@ export const AuthProvider = ({ children }) => {
         },
       );
 
-      toast.success(response.data.message);
+      toast.success(response.data.message || "Password changed successfully");
 
       return {
         success: true,
@@ -409,6 +441,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
 
     localStorage.removeItem("expensepilot_user");
+
     localStorage.removeItem("expensepilot_token");
 
     toast.success("Logged out successfully");

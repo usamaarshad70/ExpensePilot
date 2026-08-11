@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
+      maxlength: 100,
     },
 
     email: {
@@ -18,11 +20,13 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      maxlength: 150,
     },
 
     password: {
       type: String,
       required: true,
+      minlength: 6,
     },
 
     // ==========================================
@@ -34,8 +38,6 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    // Cloudinary public ID
-    // Used to delete/replace the image properly
     profilePicturePublicId: {
       type: String,
       default: "",
@@ -53,6 +55,15 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: {
       type: Date,
       default: null,
+    },
+
+    // ==========================================
+    // ACCOUNT STATUS
+    // ==========================================
+
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   {

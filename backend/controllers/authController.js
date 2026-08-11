@@ -29,6 +29,18 @@ const generateCode = () => {
 };
 
 // ==========================================
+// PASSWORD VALIDATION
+// ==========================================
+
+const validatePassword = (password) => {
+  if (!password || password.length < 6) {
+    return "Password must be at least 6 characters";
+  }
+
+  return null;
+};
+
+// ==========================================
 // REGISTER
 // ==========================================
 
@@ -36,7 +48,10 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validation
+    // ------------------------------------------
+    // VALIDATION
+    // ------------------------------------------
+
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -44,24 +59,53 @@ const registerUser = async (req, res) => {
       });
     }
 
-    if (name.trim().length < 2) {
+    const trimmedName = name.trim();
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (trimmedName.length < 2) {
       return res.status(400).json({
         success: false,
         message: "Name must be at least 2 characters",
       });
     }
 
-    if (password.length < 6) {
+    if (trimmedName.length > 100) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 6 characters",
+        message: "Name cannot exceed 100 characters",
       });
     }
 
-    // Normalize email
-    const normalizedEmail = email.toLowerCase().trim();
+    // ------------------------------------------
+    // EMAIL VALIDATION
+    // ------------------------------------------
 
-    // Check existing user
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address",
+      });
+    }
+
+    // ------------------------------------------
+    // PASSWORD VALIDATION
+    // ------------------------------------------
+
+    const passwordError = validatePassword(password);
+
+    if (passwordError) {
+      return res.status(400).json({
+        success: false,
+        message: passwordError,
+      });
+    }
+
+    // ------------------------------------------
+    // CHECK EXISTING USER
+    // ------------------------------------------
+
     const existingUser = await User.findOne({
       email: normalizedEmail,
     });
@@ -73,20 +117,32 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Hash password
+    // ------------------------------------------
+    // HASH PASSWORD
+    // ------------------------------------------
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // ------------------------------------------
+    // CREATE USER
+    // ------------------------------------------
+
     const user = await User.create({
-      name: name.trim(),
+      name: trimmedName,
       email: normalizedEmail,
       password: hashedPassword,
     });
 
-    // Generate token
+    // ------------------------------------------
+    // GENERATE TOKEN
+    // ------------------------------------------
+
     const token = generateToken(user._id);
 
-    // Response
+    // ------------------------------------------
+    // RESPONSE
+    // ------------------------------------------
+
     return res.status(201).json({
       success: true,
       message: "Account created successfully",
@@ -116,7 +172,10 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
+    // ------------------------------------------
+    // VALIDATION
+    // ------------------------------------------
+
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -124,10 +183,12 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find user
+    // ------------------------------------------
+    // FIND USER
+    // ------------------------------------------
+
     const user = await User.findOne({
       email: normalizedEmail,
     });
@@ -139,7 +200,21 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Compare password
+    // ------------------------------------------
+    // ACCOUNT STATUS
+    // ------------------------------------------
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been disabled",
+      });
+    }
+
+    // ------------------------------------------
+    // COMPARE PASSWORD
+    // ------------------------------------------
+
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
@@ -149,7 +224,10 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generate token
+    // ------------------------------------------
+    // GENERATE TOKEN
+    // ------------------------------------------
+
     const token = generateToken(user._id);
 
     return res.status(200).json({
@@ -175,14 +253,12 @@ const loginUser = async (req, res) => {
 
 // ==========================================
 // FORGOT PASSWORD
-// NO EMAIL
 // ==========================================
 
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Validation
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -190,10 +266,8 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find user
     const user = await User.findOne({
       email: normalizedEmail,
     });
@@ -205,30 +279,54 @@ const forgotPassword = async (req, res) => {
       });
     }
 
-    // Generate 6 digit code
+    // ------------------------------------------
+    // GENERATE RESET CODE
+    // ------------------------------------------
+
     const code = generateCode();
 
-    // Save reset code
     user.passwordResetCode = code;
 
-    // Code expires after 10 minutes
     user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
 
-    // DEVELOPMENT / NO EMAIL MODE
+    // ------------------------------------------
+    // DEVELOPMENT MODE
+    // ------------------------------------------
+
+    const isDevelopmentResetMode =
+      process.env.PASSWORD_RESET_DEV_MODE === "true";
+
+    if (isDevelopmentResetMode) {
+      console.log(`Password reset code for ${normalizedEmail}: ${code}`);
+
+      return res.status(200).json({
+        success: true,
+        message: "Password reset code generated successfully",
+        resetCode: code,
+        expiresIn: 600,
+      });
+    }
+
+    // ------------------------------------------
+    // PRODUCTION MODE
+    // ------------------------------------------
+
+    // Later we will send this code through email.
+    // NEVER expose the reset code in production.
+
     return res.status(200).json({
       success: true,
-      message: "Password reset code generated successfully",
-      resetCode: code,
-      expiresIn: 600,
+      message:
+        "If an account exists with this email, a password reset code has been sent.",
     });
   } catch (error) {
     console.error("Forgot password error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to generate password reset code",
+      message: "Failed to process password reset request",
     });
   }
 };
@@ -241,7 +339,6 @@ const resetPassword = async (req, res) => {
   try {
     const { email, code, newPassword } = req.body;
 
-    // Validation
     if (!email || !code || !newPassword) {
       return res.status(400).json({
         success: false,
@@ -249,17 +346,17 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    const passwordError = validatePassword(newPassword);
+
+    if (passwordError) {
       return res.status(400).json({
         success: false,
-        message: "New password must be at least 6 characters",
+        message: passwordError.replace("Password", "New password"),
       });
     }
 
-    // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Find user
     const user = await User.findOne({
       email: normalizedEmail,
     });
@@ -271,7 +368,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // Check reset code exists
+    // ------------------------------------------
+    // CHECK CODE
+    // ------------------------------------------
+
     if (!user.passwordResetCode || !user.passwordResetExpires) {
       return res.status(400).json({
         success: false,
@@ -279,7 +379,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // Check expiration
+    // ------------------------------------------
+    // CHECK EXPIRATION
+    // ------------------------------------------
+
     if (new Date() > user.passwordResetExpires) {
       user.passwordResetCode = null;
       user.passwordResetExpires = null;
@@ -292,7 +395,10 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // Compare code
+    // ------------------------------------------
+    // COMPARE CODE
+    // ------------------------------------------
+
     if (user.passwordResetCode !== code.toString().trim()) {
       return res.status(400).json({
         success: false,
@@ -300,10 +406,14 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // Hash new password
+    // ------------------------------------------
+    // UPDATE PASSWORD
+    // ------------------------------------------
+
     user.password = await bcrypt.hash(newPassword, 10);
 
-    // Clear reset code
+    // Clear reset information
+
     user.passwordResetCode = null;
     user.passwordResetExpires = null;
 
@@ -329,7 +439,9 @@ const resetPassword = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("-password");
+    const user = await User.findById(req.userId).select(
+      "-password -passwordResetCode -passwordResetExpires",
+    );
 
     if (!user) {
       return res.status(404).json({
@@ -374,21 +486,45 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    // Update name
+    // ------------------------------------------
+    // UPDATE NAME
+    // ------------------------------------------
+
     if (name !== undefined) {
-      if (name.trim().length < 2) {
+      const trimmedName = name.trim();
+
+      if (trimmedName.length < 2) {
         return res.status(400).json({
           success: false,
           message: "Name must be at least 2 characters",
         });
       }
 
-      user.name = name.trim();
+      if (trimmedName.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "Name cannot exceed 100 characters",
+        });
+      }
+
+      user.name = trimmedName;
     }
 
-    // Update email
+    // ------------------------------------------
+    // UPDATE EMAIL
+    // ------------------------------------------
+
     if (email !== undefined) {
       const normalizedEmail = email.toLowerCase().trim();
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!emailRegex.test(normalizedEmail)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid email address",
+        });
+      }
 
       const existingUser = await User.findOne({
         email: normalizedEmail,
@@ -435,7 +571,6 @@ const updateProfile = async (req, res) => {
 
 const uploadProfilePicture = async (req, res) => {
   try {
-    // Check file
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -443,7 +578,6 @@ const uploadProfilePicture = async (req, res) => {
       });
     }
 
-    // Find user
     const user = await User.findById(req.userId);
 
     if (!user) {
@@ -453,15 +587,38 @@ const uploadProfilePicture = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // UPLOAD NEW IMAGE FIRST
-    // ==========================================
+    // ------------------------------------------
+    // FILE TYPE CHECK
+    // ------------------------------------------
+
+    if (!req.file.mimetype.startsWith("image/")) {
+      return res.status(400).json({
+        success: false,
+        message: "Only image files are allowed",
+      });
+    }
+
+    // ------------------------------------------
+    // FILE SIZE CHECK
+    // ------------------------------------------
+
+    if (req.file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: "Image size must be less than 5MB",
+      });
+    }
+
+    // ------------------------------------------
+    // UPLOAD NEW IMAGE
+    // ------------------------------------------
 
     const uploadResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: "expensepilot/profile-pictures",
           resource_type: "image",
+
           transformation: [
             {
               width: 300,
@@ -483,15 +640,15 @@ const uploadProfilePicture = async (req, res) => {
       uploadStream.end(req.file.buffer);
     });
 
-    // ==========================================
-    // SAVE OLD PICTURE INFORMATION
-    // ==========================================
+    // ------------------------------------------
+    // SAVE OLD PUBLIC ID
+    // ------------------------------------------
 
     const oldPublicId = user.profilePicturePublicId;
 
-    // ==========================================
-    // SAVE NEW PICTURE
-    // ==========================================
+    // ------------------------------------------
+    // SAVE NEW IMAGE
+    // ------------------------------------------
 
     user.profilePicture = uploadResult.secure_url;
 
@@ -499,10 +656,9 @@ const uploadProfilePicture = async (req, res) => {
 
     await user.save();
 
-    // ==========================================
-    // DELETE OLD CLOUDINARY IMAGE
-    // AFTER NEW IMAGE IS SAVED
-    // ==========================================
+    // ------------------------------------------
+    // DELETE OLD IMAGE
+    // ------------------------------------------
 
     if (oldPublicId && oldPublicId !== uploadResult.public_id) {
       try {
@@ -519,10 +675,6 @@ const uploadProfilePicture = async (req, res) => {
       }
     }
 
-    // ==========================================
-    // RESPONSE
-    // ==========================================
-
     return res.status(200).json({
       success: true,
       message: "Profile picture updated successfully",
@@ -530,7 +682,7 @@ const uploadProfilePicture = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        profilePicture: user.profilePicture,
+        profilePicture: user.profilePicture || "",
       },
     });
   } catch (error) {
@@ -558,37 +710,28 @@ const removeProfilePicture = async (req, res) => {
       });
     }
 
-    // ==========================================
-    // DELETE IMAGE FROM CLOUDINARY
-    // ==========================================
+    // ------------------------------------------
+    // DELETE FROM CLOUDINARY
+    // ------------------------------------------
 
     if (user.profilePicturePublicId) {
       try {
         await cloudinary.uploader.destroy(user.profilePicturePublicId, {
           resource_type: "image",
         });
-
-        console.log(
-          "Profile picture deleted from Cloudinary:",
-          user.profilePicturePublicId,
-        );
       } catch (cloudinaryError) {
         console.error("Cloudinary deletion error:", cloudinaryError.message);
       }
     }
 
-    // ==========================================
-    // CLEAR PROFILE PICTURE
-    // ==========================================
+    // ------------------------------------------
+    // CLEAR DATABASE
+    // ------------------------------------------
 
     user.profilePicture = "";
     user.profilePicturePublicId = "";
 
     await user.save();
-
-    // ==========================================
-    // RESPONSE
-    // ==========================================
 
     return res.status(200).json({
       success: true,
@@ -625,10 +768,12 @@ const changePassword = async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    const passwordError = validatePassword(newPassword);
+
+    if (passwordError) {
       return res.status(400).json({
         success: false,
-        message: "New password must be at least 6 characters",
+        message: passwordError.replace("Password", "New password"),
       });
     }
 
@@ -641,6 +786,10 @@ const changePassword = async (req, res) => {
       });
     }
 
+    // ------------------------------------------
+    // VERIFY CURRENT PASSWORD
+    // ------------------------------------------
+
     const passwordMatch = await bcrypt.compare(currentPassword, user.password);
 
     if (!passwordMatch) {
@@ -649,6 +798,23 @@ const changePassword = async (req, res) => {
         message: "Current password is incorrect",
       });
     }
+
+    // ------------------------------------------
+    // PREVENT SAME PASSWORD
+    // ------------------------------------------
+
+    const samePassword = await bcrypt.compare(newPassword, user.password);
+
+    if (samePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from current password",
+      });
+    }
+
+    // ------------------------------------------
+    // UPDATE PASSWORD
+    // ------------------------------------------
 
     user.password = await bcrypt.hash(newPassword, 10);
 
