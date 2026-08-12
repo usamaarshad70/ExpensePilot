@@ -1,31 +1,65 @@
 import { NavLink } from "react-router-dom";
 import { saveAs } from "file-saver";
 import toast from "react-hot-toast";
-import { X } from "lucide-react";
+
+import {
+  X,
+  LayoutDashboard,
+  PlusCircle,
+  ReceiptText,
+  PieChart,
+  WalletCards,
+  Target,
+  Settings,
+  Download,
+} from "lucide-react";
 
 import { useExpense } from "../context/ExpenseContext";
 
 import logo from "../assets/Expense Pilot Logo.png";
 
 function Sidebar({ sidebarOpen, setSidebarOpen }) {
-  const { transactions } = useExpense();
+  const { transactions = [] } = useExpense();
+
+  // ==========================================
+  // NAVIGATION LINKS
+  // ==========================================
 
   const links = [
     {
       path: "/",
-      label: "📊 Dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
     },
     {
       path: "/expenses",
-      label: "➕ Add Transaction",
+      label: "Add Transaction",
+      icon: PlusCircle,
+    },
+    {
+      path: "/transactions",
+      label: "Transactions",
+      icon: ReceiptText,
     },
     {
       path: "/reports",
-      label: "📈 Reports",
+      label: "Reports",
+      icon: PieChart,
+    },
+    {
+      path: "/budgets",
+      label: "Budgets",
+      icon: WalletCards,
+    },
+    {
+      path: "/savings-goals",
+      label: "Savings Goals",
+      icon: Target,
     },
     {
       path: "/settings",
-      label: "⚙️ Settings",
+      label: "Settings",
+      icon: Settings,
     },
   ];
 
@@ -62,7 +96,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
   // ==========================================
 
   const exportToCSV = () => {
-    if (transactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       toast.error("No transactions to export");
       return;
     }
@@ -92,12 +126,15 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
 
     saveAs(blob, fileName);
 
-    toast.success("CSV Exported Successfully");
+    toast.success("CSV exported successfully");
   };
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* ==========================================
+          MOBILE OVERLAY
+      ========================================== */}
+
       {sidebarOpen && (
         <div
           className="
@@ -110,6 +147,10 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* ==========================================
+          SIDEBAR
+      ========================================== */}
 
       <aside
         className={`
@@ -133,7 +174,9 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
           lg:translate-x-0
         `}
       >
-        {/* Logo Section */}
+        {/* ==========================================
+            LOGO
+        ========================================== */}
 
         <div
           className="
@@ -161,72 +204,99 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
             />
           </div>
 
+          {/* MOBILE CLOSE BUTTON */}
+
           <button
+            type="button"
             onClick={() => setSidebarOpen(false)}
             className="
               lg:hidden
               text-white
               hover:text-red-400
+              transition
             "
+            aria-label="Close sidebar"
           >
             <X size={28} />
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* ==========================================
+            NAVIGATION
+        ========================================== */}
 
-        <div className="flex-1 px-4">
-          <nav className="space-y-3">
-            {links.map((link) => (
-              <NavLink
-                key={link.path}
-                to={link.path}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) =>
-                  `
-                    block
-                    px-5
-                    py-4
-                    rounded-xl
-                    font-medium
-                    transition-all
-                    duration-300
+        <div className="flex-1 px-4 overflow-y-auto">
+          <nav className="space-y-2">
+            {links.map((link) => {
+              const Icon = link.icon;
 
-                    ${
-                      isActive
-                        ? "bg-blue-600 text-white shadow-lg"
-                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                    }
-                  `
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+              return (
+                <NavLink
+                  key={link.path}
+                  to={link.path}
+                  end={link.path === "/"}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) =>
+                    `
+                      flex
+                      items-center
+                      gap-3
+                      px-5
+                      py-3.5
+                      rounded-xl
+                      font-medium
+                      transition-all
+                      duration-300
+
+                      ${
+                        isActive
+                          ? "bg-blue-600 text-white shadow-lg"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      }
+                    `
+                  }
+                >
+                  <Icon size={20} />
+
+                  <span>{link.label}</span>
+                </NavLink>
+              );
+            })}
           </nav>
 
-          {/* Export CSV */}
+          {/* ==========================================
+              EXPORT CSV
+          ========================================== */}
 
           <button
+            type="button"
             onClick={exportToCSV}
             className="
-              mt-8
+              mt-6
               w-full
+              flex
+              items-center
+              justify-center
+              gap-2
               bg-emerald-600
               hover:bg-emerald-700
               text-white
-              py-4
+              py-3.5
               rounded-xl
               font-medium
               transition-all
               duration-300
             "
           >
-            📄 Export CSV
+            <Download size={20} />
+
+            <span>Export CSV</span>
           </button>
         </div>
 
-        {/* Footer */}
+        {/* ==========================================
+            FOOTER
+        ========================================== */}
 
         <div
           className="
@@ -238,7 +308,7 @@ function Sidebar({ sidebarOpen, setSidebarOpen }) {
             text-sm
           "
         >
-          ExpensePilot v8
+          ExpensePilot v10
         </div>
       </aside>
     </>

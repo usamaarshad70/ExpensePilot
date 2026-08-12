@@ -8,22 +8,72 @@ import ReportInsights from "../components/ReportInsights";
 
 import { useExpense } from "../context/ExpenseContext";
 
+// ==========================================
+// GET CURRENT LOCAL MONTH
+// ==========================================
+
+const getCurrentMonth = () => {
+  const date = new Date();
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}`;
+};
+
+// ==========================================
+// GET TRANSACTION MONTH
+// ==========================================
+
+const getTransactionMonth = (dateValue) => {
+  if (!dateValue) return "";
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}`;
+};
+
+// ==========================================
+// GET MONTH NAME
+// ==========================================
+
+const getMonthName = (monthValue) => {
+  if (!monthValue) return "";
+
+  const date = new Date(`${monthValue}-01T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+// ==========================================
+// REPORTS
+// ==========================================
+
 function Reports() {
-  const { transactions } = useExpense();
+  const { transactions = [], loading } = useExpense();
 
-  // Current month: YYYY-MM
-  const currentMonth = new Date().toISOString().slice(0, 7);
-
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
   // ==========================================
   // FILTER SELECTED MONTH
   // ==========================================
 
   const monthlyTransactions = transactions.filter((transaction) => {
-    if (!transaction.date) return false;
-
-    return transaction.date.slice(0, 7) === selectedMonth;
+    return getTransactionMonth(transaction.date) === selectedMonth;
   });
 
   // ==========================================
@@ -31,16 +81,20 @@ function Reports() {
   // ==========================================
 
   const income = monthlyTransactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+    .filter((transaction) => transaction.type === "income")
+    .reduce((sum, transaction) => {
+      return sum + Number(transaction.amount || 0);
+    }, 0);
 
   // ==========================================
   // MONTHLY EXPENSE
   // ==========================================
 
   const expense = monthlyTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((sum, transaction) => {
+      return sum + Number(transaction.amount || 0);
+    }, 0);
 
   // ==========================================
   // MONTHLY BALANCE
@@ -48,17 +102,53 @@ function Reports() {
 
   const balance = income - expense;
 
+  // ==========================================
+  // MONTH NAME
+  // ==========================================
+
+  const monthName = getMonthName(selectedMonth);
+
+  // ==========================================
+  // LOADING
+  // ==========================================
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-5xl mb-4">📊</div>
+
+            <p className="text-slate-500 dark:text-slate-400">
+              Loading reports...
+            </p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       {/* ======================================
           PAGE HEADER
       ====================================== */}
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Reports</h1>
+          <h1
+            className="
+              text-3xl
+              md:text-4xl
+              font-bold
+              text-slate-900
+              dark:text-white
+            "
+          >
+            Reports
+          </h1>
 
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
             Analyze your income and expenses
           </p>
         </div>
@@ -66,31 +156,73 @@ function Reports() {
         {/* MONTH SELECTOR */}
 
         <div>
-          <label className="block text-sm font-medium mb-1">Select Month</label>
+          <label
+            htmlFor="report-month"
+            className="
+              block
+              text-sm
+              font-medium
+              text-slate-700
+              dark:text-slate-300
+              mb-1
+            "
+          >
+            Select Month
+          </label>
 
           <input
+            id="report-month"
             type="month"
             value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
+            onChange={(event) => setSelectedMonth(event.target.value)}
             className="
+              w-full
+              md:w-auto
               border
               border-slate-300
               dark:border-slate-600
+              bg-white
               dark:bg-slate-700
+              text-slate-900
+              dark:text-white
               rounded-lg
               px-4
               py-2
               outline-none
+              focus:ring-2
+              focus:ring-blue-500
             "
           />
         </div>
       </div>
 
       {/* ======================================
+          SELECTED MONTH
+      ====================================== */}
+
+      <div className="mb-6">
+        <h2
+          className="
+            text-xl
+            md:text-2xl
+            font-bold
+            text-slate-900
+            dark:text-white
+          "
+        >
+          {monthName}
+        </h2>
+
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Financial summary for the selected month
+        </p>
+      </div>
+
+      {/* ======================================
           MONTHLY SUMMARY
       ====================================== */}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* INCOME */}
 
         <div
@@ -102,6 +234,8 @@ function Reports() {
             p-6
             rounded-2xl
             shadow-lg
+            hover:scale-[1.02]
+            transition
           "
         >
           <p className="text-sm opacity-90">Monthly Income</p>
@@ -122,6 +256,8 @@ function Reports() {
             p-6
             rounded-2xl
             shadow-lg
+            hover:scale-[1.02]
+            transition
           "
         >
           <p className="text-sm opacity-90">Monthly Expense</p>
@@ -142,6 +278,8 @@ function Reports() {
             p-6
             rounded-2xl
             shadow-lg
+            hover:scale-[1.02]
+            transition
           "
         >
           <p className="text-sm opacity-90">Monthly Balance</p>
@@ -153,11 +291,11 @@ function Reports() {
       </div>
 
       {/* ======================================
-    REPORT INSIGHTS
-====================================== */}
+          REPORT INSIGHTS
+      ====================================== */}
 
       {monthlyTransactions.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-8">
           <ReportInsights transactions={monthlyTransactions} />
         </div>
       )}
@@ -182,25 +320,33 @@ function Reports() {
         >
           <div className="text-5xl mb-4">📊</div>
 
-          <h2 className="text-2xl font-bold mb-2">
+          <h2
+            className="
+              text-2xl
+              font-bold
+              text-slate-900
+              dark:text-white
+              mb-2
+            "
+          >
             No Transactions This Month
           </h2>
 
-          <p className="text-slate-500">
-            There are no income or expense transactions for the selected month.
+          <p className="text-slate-500 dark:text-slate-400">
+            There are no income or expense transactions for {monthName}.
           </p>
         </div>
       ) : (
-        /* ======================================
-           CHARTS
-        ====================================== */
-
-        <div className="space-y-6">
-          {/* MONTHLY TREND */}
+        <div className="space-y-8">
+          {/* ======================================
+              MONTHLY TREND
+          ====================================== */}
 
           <MonthlyTrendChart transactions={transactions} />
 
-          {/* SELECTED MONTH CHARTS */}
+          {/* ======================================
+              SELECTED MONTH CHARTS
+          ====================================== */}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ExpenseChart transactions={monthlyTransactions} />

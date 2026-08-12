@@ -10,8 +10,18 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const connectDB = require("./config/db");
+
 const authRoutes = require("./routes/authRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+
+// Budget routes
+const budgetRoutes = require("./routes/budgetRoutes");
+
+// Savings goal routes
+const savingsGoalRoutes = require("./routes/savingsGoalRoutes");
+
+// Savings history routes
+const savingsHistoryRoutes = require("./routes/savingsHistoryRoutes");
 
 const app = express();
 
@@ -54,6 +64,15 @@ app.use("/api/auth", authRoutes);
 
 // Transactions
 app.use("/api/transactions", transactionRoutes);
+
+// Budgets
+app.use("/api/budgets", budgetRoutes);
+
+// Savings Goals
+app.use("/api/savings-goals", savingsGoalRoutes);
+
+// Savings History
+app.use("/api/savings-history", savingsHistoryRoutes);
 
 // ==========================================
 // SERVER

@@ -7,22 +7,45 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-function ExpenseChart({ transactions }) {
+function ExpenseChart({ transactions = [] }) {
+  // ==========================================
+  // EXPENSE TRANSACTIONS
+  // ==========================================
+
   const expenseTransactions = transactions.filter(
     (transaction) => transaction.type === "expense",
   );
 
-  const chartData = Object.entries(
-    expenseTransactions.reduce((acc, transaction) => {
-      acc[transaction.category] =
-        (acc[transaction.category] || 0) + Number(transaction.amount);
+  // ==========================================
+  // CATEGORY TOTALS
+  // ==========================================
 
-      return acc;
-    }, {}),
-  ).map(([name, value]) => ({
-    name,
-    value,
-  }));
+  const categoryTotals = expenseTransactions.reduce(
+    (accumulator, transaction) => {
+      const category = transaction.category?.trim() || "Uncategorized";
+
+      accumulator[category] =
+        (accumulator[category] || 0) + Number(transaction.amount || 0);
+
+      return accumulator;
+    },
+    {},
+  );
+
+  // ==========================================
+  // CHART DATA
+  // ==========================================
+
+  const chartData = Object.entries(categoryTotals)
+    .filter(([, value]) => value > 0)
+    .map(([name, value]) => ({
+      name,
+      value,
+    }));
+
+  // ==========================================
+  // COLORS
+  // ==========================================
 
   const COLORS = [
     "#0088FE",
@@ -37,6 +60,14 @@ function ExpenseChart({ transactions }) {
     "#EC407A",
   ];
 
+  // ==========================================
+  // FORMAT CURRENCY
+  // ==========================================
+
+  const formatCurrency = (value) => {
+    return `PKR ${Number(value).toLocaleString()}`;
+  };
+
   return (
     <div
       className="
@@ -50,14 +81,26 @@ function ExpenseChart({ transactions }) {
         p-6
       "
     >
-      <h2 className="text-2xl font-bold mb-4">Category Breakdown</h2>
+      <h2
+        className="
+          text-2xl
+          font-bold
+          text-slate-900
+          dark:text-white
+          mb-4
+        "
+      >
+        Category Breakdown
+      </h2>
 
       {chartData.length === 0 ? (
         <div className="h-[350px] flex items-center justify-center">
           <div className="text-center">
             <p className="text-5xl mb-3">📊</p>
 
-            <p className="text-slate-500 text-lg">No expense data available</p>
+            <p className="text-slate-500 dark:text-slate-400 text-lg">
+              No expense data available
+            </p>
           </div>
         </div>
       ) : (
@@ -71,11 +114,19 @@ function ExpenseChart({ transactions }) {
               label
             >
               {chartData.map((entry, index) => (
-                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                <Cell
+                  key={`cell-${entry.name}-${index}`}
+                  fill={COLORS[index % COLORS.length]}
+                />
               ))}
             </Pie>
 
-            <Tooltip />
+            <Tooltip
+              formatter={(value) => {
+                return formatCurrency(value);
+              }}
+            />
+
             <Legend />
           </PieChart>
         </ResponsiveContainer>
